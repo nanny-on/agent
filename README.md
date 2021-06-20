@@ -1,2 +1,2 @@
 # agent
-This repository contains nanny-on agent source codes. Anyone can contribute to write and update the codes.
+This repository contains Nanny-On agent source codes. Anyone can contribute to write and update the codes.
