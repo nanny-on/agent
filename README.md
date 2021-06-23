@@ -74,3 +74,5 @@ Copyright
 =========
 
 Copyright (c) 2013-2021 ASHINi Corp.
+
+All rights reserved.
