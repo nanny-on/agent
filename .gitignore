@@ -1,0 +1,44 @@
+# Extension
+*.obj
+*.pch
+*.exp
+*.idb
+*.htm
+*.ilk
+*.ncb
+*.user
+*.suo
+*.aps
+*.tds
+*.log
+*.tlog
+*.ncb
+*.opt
+*.pld
+*.plg
+*.txt
+*.asic
+*.old
+*.bcc32pch
+*.positions
+*.info
+*.dbf
+*.exe
+*.dll
+*.pdb
+
+
+#
+#
+#
+# FileName
+
+#
+#
+#
+# Directory
+intermediate
+.svn
+inven
+plug-in
+
