@@ -11,7 +11,7 @@ set -e;										\
 	done
 endef
 
-SUBDIR := 05_LIB
+SUBDIR := 05_LIB 01_BASE 01_GLB_W32 03_UTIL
 
 .PHONY: all
 
