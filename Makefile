@@ -11,12 +11,15 @@ set -e;										\
 	done
 endef
 
-SUBDIR := 01_SDK
+SUBDIR := 01_SDK 10_PROJECT
 
 .PHONY: all
 
 all:
 	@$(make_sub_dir)
 
+install:
+	@$(make_sub_dir)
+	
 clean:
 	@$(make_sub_dir)
