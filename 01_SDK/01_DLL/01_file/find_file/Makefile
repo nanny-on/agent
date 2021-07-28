@@ -1,4 +1,4 @@
-include ../build.config
+include ../../../../build.config
 
 CFLAGS = $(DEFINES) $(INCLUDES)
 
@@ -20,9 +20,9 @@ set -e;                                     \
     done
 endef
 
-SUBDIR := 05_LIB 01_BASE 01_GLB_W32 03_UTIL 01_DLL
+SUBDIR := dll dll_lib
 
-INSTDIR := 01_DLL
+INSTDIR := dll
 
 .PHONY: all
 
