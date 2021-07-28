@@ -1,4 +1,4 @@
-include ../../build.config
+include ../../../../build.config
 
 CFLAGS = $(DEFINES) $(INCLUDES)
 
@@ -11,7 +11,7 @@ set -e;										\
 	done
 endef
 
-SUBDIR := 01_file 02_network 03_system 04_dbms
+SUBDIR := dll
 
 .PHONY: all
 
