@@ -11,7 +11,7 @@ set -e;										\
 	done
 endef
 
-SUBDIR := device_info res_info res_usage_info software_info
+SUBDIR := device_info res_info res_usage_info software_info white_pattern
 
 .PHONY: all
 
