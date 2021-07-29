@@ -12,7 +12,7 @@ set -e;										\
 endef
 
 
-SUBDIR := dbuse
+SUBDIR := dbuse editconf
 
 .PHONY: all
 
