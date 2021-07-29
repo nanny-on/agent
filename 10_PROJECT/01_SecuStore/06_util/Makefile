@@ -12,7 +12,7 @@ set -e;										\
 endef
 
 
-SUBDIR := dbuse editconf
+SUBDIR := dbuse editconf makehash
 
 .PHONY: all
 
