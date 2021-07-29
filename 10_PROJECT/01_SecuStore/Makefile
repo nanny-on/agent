@@ -11,7 +11,7 @@ set -e;										\
 	done
 endef
 
-SUBDIR := 06_util
+SUBDIR := 06_util 05_lnx_agt
 
 .PHONY: all
 
