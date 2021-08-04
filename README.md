@@ -5,7 +5,7 @@ This repository contains Nanny-On agent source codes. Anyone can contribute to t
 Welcome to Nanny-On Open Source Project
 =======================================
 
-Nanny-On is an application control program using adaptive whitelisting technologies.
+Nanny-On is an application control program taking advantage of adaptive whitelisting technologies.
 Generally, application control programs enhance security features and availability of
 embedded systems such as POS, CD/ATM, ICS(Industrial Control System), etc.
 However, we wish to extend the target system to personal and server computers.
