@@ -19,10 +19,19 @@
 #ifndef COM_DEFINE_DBF_MECRO_H_938EF200_F60B_452A_BD30_A10E8507EDCC
 #define COM_DEFINE_DBF_MECRO_H_938EF200_F60B_452A_BD30_A10E8507EDCC
 
-
+/*
 #define MAKEUINT64(a, b)      	((UINT64) (((UINT32) (a)) | ((UINT64) ((UINT32) (b))) << 32))
+
+#ifndef LOUINT32
 #define LOUINT32(l)           	((UINT32) (l))
+#endif 
+
+#ifndef HIUINT32
 #define HIUINT32(l)           	((UINT32) (((UINT64) (l) >> 32) & 0xFFFFFFFF))
+#endif 
+
+*/
+
 #define LOLONG(l)           	((LONG) (l))
 #define HILONG(l)           	((LONG) (((UINT64) (l) >> 32) & 0xFFFFFFFF))
                                      
