@@ -57,4 +57,4 @@ public:
 
 extern CResInfoDLLUtil*		t_ResInfoDLLUtil;
 
-#endif * /*_RES_INFO_DLL_UTIL_H__*/
+#endif /*_RES_INFO_DLL_UTIL_H__*/
