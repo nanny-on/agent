@@ -101,21 +101,26 @@ INT32 CWhitePatternUtil::get_signiture(char *szPath, PASI_WENG_WL_EX pWhiteList,
 		{
 			pWhiteList->dwMasic = 0xFF;
 			nRetVal = SHAFile(ASIHASH_SHA_LEN_TYPE_512, szPath, szHashVal, SHA512_BLOCK_SIZE+1);
+			if(nRetVal < 0)
+			{
+				nRetVal -= 20;
+				break;
+			}
 		}
 		else
 		{
-			nRetVal -= 20;
+			nRetVal -= 30;
 			break;
 		}
 		strncpy(pWhiteList->acFilePath, szPath, MAX_PATH-1);
 		pWhiteList->acFilePath[MAX_PATH-1] = 0;
-		//File Length ÀúÀå
+		//File Length ì €ìž¥
 		pWhiteList->dwFileSize = pFileData->dwFileSize;
-		//File Write Time ÀúÀå
+		//File Write Time ì €ìž¥
 		pWhiteList->dwWriteTime = pFileData->dwWriteTime;
-		//File Access Time ÀúÀå
+		//File Access Time ì €ìž¥
 		pWhiteList->dwAccessTime = pFileData->dwAccessTime;
-		//hash value ÀúÀå
+		//hash value ì €ìž¥
 		strncpy(pWhiteList->acWhiteHash, szHashVal, SHA512_BLOCK_SIZE);
 		pWhiteList->acWhiteHash[SHA512_BLOCK_SIZE] = 0;
 		nRetVal = 0;
@@ -294,7 +299,6 @@ INT32 CWhitePatternUtil::we_dbmake(char *acEnginePath, char *acDbName, char *acL
 					pFileHdr->acDbName[nRetVal-4] = 0;
 				}
 			}
-			nRetVal = 0;
 		}
 		snprintf(pcPatternFile, MAX_PATH-1, "%s/%s.wdb", acEnginePath, pFileHdr->acDbName);
 		pcPatternFile[MAX_PATH-1] = 0;
@@ -642,7 +646,6 @@ INT32 CWhitePatternUtil::we_pattern_create(char *acWhitePath, char *acEnginePath
 					pFileHdr->acDbName[nRetVal-4] = 0;
 				}
 			}
-			nRetVal = 0;
 		}
 
 		snprintf(pcPatternFile, MAX_PATH-1, "%s/%s.wdb", acEnginePath, pFileHdr->acDbName);
@@ -1281,7 +1284,7 @@ INT32 CWhitePatternUtil::asi_get_white_list_count(PWHITE_PARSE_DATA pPasrseData,
 			nRetVal -= 10;
 			break;
 		}
-		//ÀüÃ¼ ¸®½ºÆ® ¼ö Á¶È¸
+		//ì „ì²´ ë¦¬ìŠ¤íŠ¸ ìˆ˜ ì¡°íšŒ
 		if(pParseRule->dwParseFlag == 0)
 		{
 			nRetVal = m_tHashUtil.GetHashNodeCountWithLock(&nListCount, acLogMsg);
@@ -1747,7 +1750,7 @@ INT32 CWhitePatternUtil::asi_get_parse_rule(PWHITE_PARSE_DATA pPasrseData, PWHIT
 			}
 		}
 	}
-	//ÆÄÀÏ°æ·Î·ê
+	//íŒŒì¼ê²½ë¡œë£°
 	if(pPasrseData->dwParseFlag & AS_PARSE_FILE_PATH)
 	{
 		nCount = 0;
@@ -1968,7 +1971,7 @@ BOOL CWhitePatternUtil::asi_get_wildstr_info(char *szPath, PPARSE_RULE_PATH pWil
 
 	if (pStart == pLast)
 	{
-		if (*pStart != '*')  /* '*' Çü½ÄÀÎ °æ¿ì */
+		if (*pStart != '*')  /* '*' í˜•ì‹ì¸ ê²½ìš° */
 		{
 			return FALSE;
 		}
@@ -1976,7 +1979,7 @@ BOOL CWhitePatternUtil::asi_get_wildstr_info(char *szPath, PPARSE_RULE_PATH pWil
 		strncpy(pWildInfo->acDirPath, acDirPath, PATH_LENGTH-1);
 		pWildInfo->acDirPath[PATH_LENGTH-1];
 	}
-	else if (*pStart == '*')  /* '*data' Çü½ÄÀÎ °æ¿ì */
+	else if (*pStart == '*')  /* '*data' í˜•ì‹ì¸ ê²½ìš° */
 	{
 		pWildInfo->dwWildType = AS_WILD_PRE;
 		strncpy(pWildInfo->acWildStr, pStart + 1, WILDCARD_LENGTH-1);
@@ -1986,7 +1989,7 @@ BOOL CWhitePatternUtil::asi_get_wildstr_info(char *szPath, PPARSE_RULE_PATH pWil
 		strncpy(pWildInfo->acDirPath, acDirPath, PATH_LENGTH-1);
 		pWildInfo->acDirPath[PATH_LENGTH-1];
 	}
-	else if (*pLast == '*')  /* 'data*' Çü½ÄÀÎ °æ¿ì */
+	else if (*pLast == '*')  /* 'data*' í˜•ì‹ì¸ ê²½ìš° */
 	{
 		pWildInfo->dwWildType = AS_WILD_POST;
 		strncpy(pWildInfo->acWildStr, pStart, WILDCARD_LENGTH-1);
