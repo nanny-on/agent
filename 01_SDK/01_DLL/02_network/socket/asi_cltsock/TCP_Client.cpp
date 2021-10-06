@@ -200,7 +200,10 @@ INT32 CTCP_Client::CloseSocket(INT32 nFlag)
 		{
 			sock_evt_prop.nEventID	= ASI_SOCKET_EVENT_DISCONNECT;
 			AddEvtWithPktLock(sock_evt_prop);
-			WriteLog("[Info] [%s] [RecvThread] add socket event disconnect", m_acClassName);
+			if(m_acClassName[0] != 0)
+				WriteLog("[Info] [%s] [RecvThread] add socket event disconnect", m_acClassName);
+			else
+				WriteLog("[Info] [RecvThread] add socket event disconnect");
 			Sleep(500);
 		}
 
@@ -304,8 +307,10 @@ void *CTCP_Client::SendThread(LPVOID lParam)
 	pthread_detach(pthread_self());
 
 	pTcpClient->m_IsRunThreadSend = 2;
-	
-	pTcpClient->WriteLog("[Info] [%s] [SendThread] send thread start (%d)", pTcpClient->m_acClassName, pTcpClient->m_bContinue);
+	if(pTcpClient->m_acClassName[0] != 0)
+		pTcpClient->WriteLog("[Info] [%s] [SendThread] send thread start (%d)", pTcpClient->m_acClassName, pTcpClient->m_bContinue);
+	else
+		pTcpClient->WriteLog("[Info] [SendThread] send thread start (%d)", pTcpClient->m_bContinue);
 
 	while (pTcpClient->m_bContinue)
 	{
@@ -326,8 +331,10 @@ void *CTCP_Client::SendThread(LPVOID lParam)
 		}
 		Sleep(10);
 	}	
-
-	pTcpClient->WriteLog("[Info] [%s] [SendThread] send thread end", pTcpClient->m_acClassName);
+	if(pTcpClient->m_acClassName[0] != 0)
+		pTcpClient->WriteLog("[Info] [%s] [SendThread] send thread end", pTcpClient->m_acClassName);
+	else
+		pTcpClient->WriteLog("[Info] [SendThread] send thread end");
 
 	pTcpClient->m_IsRunThreadSend = 0;
 	return (void *)NULL;
@@ -352,7 +359,10 @@ INT32	CTCP_Client::Send(UINT16 wType, UINT16 wCode, UINT32 dwLength, PVOID pData
 	nMakeBufSize = MakeSendBuf(wType, wCode, dwLength, pData, &lpOutput);
 	if (nMakeBufSize < 1)
 	{
-		WriteLog("[Error] [%s] [Send] fail to make buf size is [%d] (-3) (%d)", m_acClassName, nMakeBufSize, errno);
+		if(m_acClassName[0] != 0)
+			WriteLog("[Error] [%s] [Send] fail to make buf size is [%d] (-3) (%d)", m_acClassName, nMakeBufSize, errno);
+		else
+			WriteLog("[Error] [Send] fail to make buf size is [%d] (-3) (%d)", nMakeBufSize, errno);
 		return -3;
 	}
 
@@ -375,7 +385,10 @@ INT32	CTCP_Client::Send(UINT16 wType, UINT16 wCode, UINT32 dwLength, PVOID pData
 
 	if (bConnected == FALSE)
 	{
-		WriteLog("[Info] [%s] [Send] close to thread (-1)", m_acClassName);
+		if(m_acClassName[0] != 0)
+			WriteLog("[Info] [%s] [Send] close to thread (-1)", m_acClassName);
+		else
+			WriteLog("[Info] [Send] close to thread (-1)");
 		safe_free(stPktData.body.data);
 		return -4;
 	}
@@ -405,14 +418,20 @@ INT32	CTCP_Client::SendCoreWithSndPktLock(PPKT_DATA pPktData, INT32 nTimeOut)
 	
 	if(pPktData == NULL)
 	{
-		WriteLog("[Error] [%s] [SendCoreWithSndPktLock] invalid input data (-1)", m_acClassName);
+		if(m_acClassName[0] != 0)
+			WriteLog("[Error] [%s] [SendCoreWithSndPktLock] invalid input data (-1)", m_acClassName);
+		else
+			WriteLog("[Error] [SendCoreWithSndPktLock] invalid input data (-1)");
 		return -1;
 	}
 	nMakeBufSize = pPktData->hdr.length;
 	pcOutput = (char *)pPktData->body.data;
 	if(nMakeBufSize < 1 || pcOutput == NULL)
 	{
-		WriteLog("[Error] [%s] [SendCoreWithSndPktLock] invalid input data (-2)", m_acClassName);
+		if(m_acClassName[0] != 0)
+			WriteLog("[Error] [%s] [SendCoreWithSndPktLock] invalid input data (-2)", m_acClassName);
+		else
+			WriteLog("[Error] [SendCoreWithSndPktLock] invalid input data (-2)");
 		return -2;
 	}
 
@@ -437,7 +456,10 @@ INT32	CTCP_Client::SendCoreWithSndPktLock(PPKT_DATA pPktData, INT32 nTimeOut)
 				}
 				else
 				{
-					WriteLog("[Info] [%s] [SendCoreWithSndPktLock] send time out. socket close (-3) (%d)", m_acClassName, nTimeOut);
+					if(m_acClassName[0] != 0)
+						WriteLog("[Info] [%s] [SendCoreWithSndPktLock] send time out. socket close (-3) (%d)", m_acClassName, nTimeOut);
+					else
+						WriteLog("[Info] [SendCoreWithSndPktLock] send time out. socket close (-3) (%d)", nTimeOut);
 					nRtn = -3;
 					CloseSocket();
 					break;
@@ -445,7 +467,10 @@ INT32	CTCP_Client::SendCoreWithSndPktLock(PPKT_DATA pPktData, INT32 nTimeOut)
 			}
 			else
 			{
-				WriteLog("[Error] [%s] [SendCoreWithSndPktLock] fail to send. socket close (-4) (%d)", m_acClassName, errno);
+				if(m_acClassName[0] != 0)
+					WriteLog("[Error] [%s] [SendCoreWithSndPktLock] fail to send. socket close (-4) (%d)", m_acClassName, errno);
+				else
+					WriteLog("[Error] [SendCoreWithSndPktLock] fail to send. socket close (-4) (%d)", errno);
 				CloseSocket();
 				nRtn = -4;
 				break;
@@ -453,7 +478,10 @@ INT32	CTCP_Client::SendCoreWithSndPktLock(PPKT_DATA pPktData, INT32 nTimeOut)
 		}
 		else if(nSendSize == 0)
 		{
-			WriteLog("[Info] [%s] [SendCoreWithSndPktLock] detect session close. socket close (-5)", m_acClassName);
+			if(m_acClassName[0] != 0)
+				WriteLog("[Info] [%s] [SendCoreWithSndPktLock] detect session close. socket close (-5)", m_acClassName);
+			else
+				WriteLog("[Info] [%s] [SendCoreWithSndPktLock] detect session close. socket close (-5)", m_acClassName);
 			CloseSocket();
 			nRtn = -5;
 			break;
@@ -1124,6 +1152,7 @@ INT32			CTCP_Client::GetPktSendWithSndPktLock(PKT_DATA& pkt_data)
 
 void CTCP_Client::WriteLog(char* fmt,...)
 {
+	return;
 	FILE *fp = NULL;
 	va_list  args;
 	char acSaveFile[MAX_PATH] = {0, };
@@ -1139,7 +1168,10 @@ void CTCP_Client::WriteLog(char* fmt,...)
 		{
 			if(get_nanny_agent_root(acSaveFile, MAX_PATH-1) != 0)
 				break;
-			snprintf(m_InitData.szLogFilePath, MAX_PATH-1, "%s/nanny/log", acSaveFile);
+			if(acSaveFile[0] != 0)
+				snprintf(m_InitData.szLogFilePath, MAX_PATH-1, "%s/nanny/log", acSaveFile);
+			else
+				snprintf(m_InitData.szLogFilePath, MAX_PATH-1, "/usr/local/ashin/nanny/log", acSaveFile);
 		}
 
 		if(m_InitData.szLogFileName[0] == 0)
@@ -1148,6 +1180,8 @@ void CTCP_Client::WriteLog(char* fmt,...)
 		}
 
 		GetCurrentDateTime(0, acTimeBuf);
+		if(acTimeBuf[0] == 0)
+			break;
 
 		snprintf(acSaveFile, MAX_PATH-1, "%s%s%s.txt", m_InitData.szLogFilePath, m_InitData.szLogFileName, acTimeBuf);
 		acSaveFile[MAX_PATH-1] = 0;
@@ -1157,17 +1191,22 @@ void CTCP_Client::WriteLog(char* fmt,...)
 			ClearOldLogFile(m_InitData.szLogFilePath, m_InitData.szLogFileName, m_InitData.m_nFileLogRetention);
 		}
 
-		fp = fopen(acSaveFile, "a");
-		if (fp == NULL)
-		{
-			break;
-		}
 		GetCurrentDateTime(1, acTimeBuf);
+		if(acTimeBuf[0] == 0)
+			break;
+		acTimeBuf[MAX_TIME_STR-1] = 0;
 		va_start(args,fmt);
 		vsnprintf(acBuf, CHAR_MAX_SIZE-1, fmt, args);		
 		va_end(args);
-		fprintf(fp, "%s\t%s\n", acTimeBuf, acBuf);
-		fclose(fp);
+		acBuf[CHAR_MAX_SIZE-1] = 0;
+		if(acBuf[0] == 0)
+			break;
+		fp = fopen(acSaveFile, "a");
+		if (fp != NULL)
+		{
+			fprintf(fp, "%s : %s\n", acTimeBuf, acBuf);
+			fclose(fp);
+		}
 	}while(FALSE);
 	pthread_mutex_unlock(&m_pkt_mutex);
 }
