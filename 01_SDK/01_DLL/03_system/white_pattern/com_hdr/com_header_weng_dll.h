@@ -21,8 +21,8 @@
 
 //------------------------------------------------------------------------------
 
-#define		HASH_PADDING_LEN	8
-#define		SHA512_BLOCK_SIZE	128
+//#define		HASH_PADDING_LEN	8
+//#define		SHA512_BLOCK_SIZE	128
 //------------------------------------------------------------------------------
 
 #define		AS_WHITE_FILE				0x0000
@@ -30,16 +30,16 @@
 #define		AS_INVALID_FILE				0x0004
 //------------------------------------------------------------------------------
 
-#define AS_PARSE_FILE_NAME	0x80	//ÆĞÅÏÆÄÀÏ¸í
-#define AS_PARSE_FILE_PATH	0x08	//ÆÄÀÏ°æ·Î·ê
-#define AS_PARSE_TAG_NAME	0x04	//ÆĞÅÏ ÅÂ±×¸í
-#define AS_PARSE_SYSTEM		0x02	//½Ã½ºÅÛ ±¸ºĞ
-#define AS_PARSE_CATEGORY	0x01	//¸®½ºÆ®¹üÁÖ
+#define AS_PARSE_FILE_NAME	0x80	//íŒ¨í„´íŒŒì¼ëª…
+#define AS_PARSE_FILE_PATH	0x08	//íŒŒì¼ê²½ë¡œë£°
+#define AS_PARSE_TAG_NAME	0x04	//íŒ¨í„´ íƒœê·¸ëª…
+#define AS_PARSE_SYSTEM		0x02	//ì‹œìŠ¤í…œ êµ¬ë¶„
+#define AS_PARSE_CATEGORY	0x01	//ë¦¬ìŠ¤íŠ¸ë²”ì£¼
 
-#define AS_WILD_NONE	0  /* wildcard »ç¿ë ¾ÈÇÔ */
-#define AS_WILD_ALL		1  /* '*' Çü½Ä */
-#define AS_WILD_PRE		2  /* '*data' Çü½Ä */
-#define AS_WILD_POST	3  /* 'data*' Çü½Ä */
+#define AS_WILD_NONE	0  /* wildcard ì‚¬ìš© ì•ˆí•¨ */
+#define AS_WILD_ALL		1  /* '*' í˜•ì‹ */
+#define AS_WILD_PRE		2  /* '*data' í˜•ì‹ */
+#define AS_WILD_POST	3  /* 'data*' í˜•ì‹ */
 
 #define AS_LOCAL_WHITE	1
 #define AS_GLOBAL_WHITE	2
@@ -67,8 +67,8 @@ typedef struct _PARSE_RULE_NAME
 
 typedef struct _PARSE_RULE_PATH {
 	DWORD dwWildType;				/* WILDTYPE_xxx */
-	DWORD dwWildLen;				/* WILDCARD »ç¿ë ¹®ÀÚ¿­ ±æÀÌ */
-	char acWildStr[MAX_TYPE_LEN];	/* wildcard »ç¿ë ¹®ÀÚ¿­ (wildcard Á¦¿Ü) */
+	DWORD dwWildLen;				/* WILDCARD ì‚¬ìš© ë¬¸ìì—´ ê¸¸ì´ */
+	char acWildStr[MAX_TYPE_LEN];	/* wildcard ì‚¬ìš© ë¬¸ìì—´ (wildcard ì œì™¸) */
 	char acDirPath[MAX_HBUFF];	
 } PARSE_RULE_PATH, *PPARSE_RULE_PATH;
 
@@ -114,8 +114,8 @@ typedef struct _asi_weng_wl_ex
 	DWORD dwCreateTime;				//24
 	DWORD dwAccessTime;				//28
 	DWORD dwWriteTime;				//32
-	DWORD dwFileVersionLS;
-	DWORD dwFileVersionMS;
+	DWORD dwPtnRisk;
+	DWORD dwReserved;
 	char acTagName[MAX_QQBUFF];		//104
 	char acProductName[MAX_QQBUFF];	//168
 	char acCompanyName[MAX_QQBUFF];	//232
