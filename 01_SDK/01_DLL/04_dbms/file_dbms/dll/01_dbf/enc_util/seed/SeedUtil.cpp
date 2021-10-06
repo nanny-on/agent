@@ -114,7 +114,7 @@ INT32	CSeedUtil::Encrypt_Len(INT32 nLen)
 {
 	if(!nLen)	return nLen;
 	
-	INT32 nLoofNum	= nLen/SeedBlockSize;
+//	INT32 nLoofNum	= nLen/SeedBlockSize;
 	INT32 nRemain	= nLen%SeedBlockSize;
 
 	if(nRemain)	nLen += (24 - nRemain);
