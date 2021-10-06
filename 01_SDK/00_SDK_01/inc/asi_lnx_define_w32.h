@@ -94,7 +94,9 @@ typedef uint64_t ULONGLONG;
 
 #define	REG_FILE		0
 #define DIR_FILE		1
-
+#define FIFO_FILE		2
+#define SOCK_FILE		3
+	
 
 #define	CHAR_MAX_SIZE	1024
 #define MAX_TIME_STR	64
@@ -114,16 +116,15 @@ typedef uint64_t ULONGLONG;
 
 #define INVALID_SOCKET	-1
 #define SOCKET_ERROR	-1
+
+#ifndef INVALID_HANDLE_VALUE
 #define INVALID_HANDLE_VALUE ((HANDLE)((LONG*)(-1)))
+#endif
+
 
 #define WM_USER 	0x0400
 #define WM_CLOSE	0x0010
 #define WM_QUIT		0x0012
-
-#define NANNY_AGENT_VERSION		"1.0.0.1"
-#define NANNY_AGENT_IDENT		"nannysvc"
-#define NANNY_AGENT_DIR			"nanny"
-
 
 #define	safe_free(x)   if(x != NULL) { free(x);x=NULL; }
 #define	ZeroMemory(x,y) memset((x), 0, (y))
@@ -153,7 +154,11 @@ typedef uint64_t ULONGLONG;
 #define DRIVE_CDROM       5
 #define DRIVE_RAMDISK     6
 #define MAKEWORD(a, b)      ((WORD)(((BYTE)(((DWORD)(a)) & 0xff)) | ((WORD)((BYTE)(((DWORD)(b)) & 0xff))) << 8))
+
+#ifndef MAKELONG
 #define MAKELONG(a, b)      ((LONG)(((WORD)(((DWORD)(a)) & 0xffff)) | ((DWORD)((WORD)(((DWORD)(b)) & 0xffff))) << 16))
+#endif
+
 #define LOWORD(l)           ((WORD)(((DWORD)(l)) & 0xffff))
 #define HIWORD(l)           ((WORD)((((DWORD)(l)) >> 16) & 0xffff))
 #define LOBYTE(w)           ((BYTE)(((DWORD)(w)) & 0xff))
