@@ -12,7 +12,7 @@ set -e;										\
 endef
 
 
-SUBDIR := dbuse editconf makehash pwevt_mon update fanotifyd
+SUBDIR := dbuse editconf makehash pwevt_mon reqwhite update fanotifyd accnotifyd
 
 .PHONY: all
 
