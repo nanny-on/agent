@@ -51,6 +51,7 @@ public:
     CString		RemainValue();
 	INT32		EditToken(char pTok = '\a');
 	UINT32		GetRemainTokenCount();
+	CString		ReverseCStr(CString strInput);
 
 public:
     CTokenCString();
