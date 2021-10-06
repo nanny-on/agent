@@ -34,6 +34,7 @@ CFindFileUtil::CFindFileUtil(void)
 	memset(m_acLogPath, 0, MAX_PATH);
 	memset(m_acLogFile, 0, MAX_PATH);
 	pthread_mutex_init(&m_mutex, NULL);
+	m_nCount = 0;
 
 }
 //--------------------------------------------------------------
@@ -113,6 +114,8 @@ INT32		CFindFileUtil::Init(PASI_FF_INIT_INFO pAfii)
 	INT32 nCpuCount = 0;
 	pthread_t tid = 0;
 	ASI_DFILE_FMT_INIT tADFI;
+
+	m_nCount = 0;
 	if(pAfii == NULL)
 		return -1;
 	
@@ -487,7 +490,9 @@ INT32		CFindFileUtil::PreSearchDir(UINT32 nOrderID, String strRootPath)
 	if(szFindDir[nLen - 1] == '*')
 	{
 		nSubDirSearch = 2;
-		szFindDir[nLen - 2] = 0;
+		szFindDir[nLen - 1] = 0;
+		if(nLen != 2)
+			szFindDir[nLen - 2] = 0;
 	}
 	Recursive_SearchDirFile(nOrderID, szFindDir, "", nSubDirSearch, nDirNum, tAFFIList);
 	if(tAFFIList.size())
@@ -557,6 +562,7 @@ INT32		CFindFileUtil::Recursive_SearchDir(UINT32 nOrderID, char *pcRootPath, cha
 	char *pcChkFileA = NULL;
 	char *pcSubAddPathA = NULL;
 	INT32 nRetVal = 0;
+	INT32 nType = 0;
 
 	memset(&tAFFI, 0, sizeof(tAFFI));
 
@@ -617,7 +623,13 @@ INT32		CFindFileUtil::Recursive_SearchDir(UINT32 nOrderID, char *pcRootPath, cha
 		}
 		pcFindDirA[CHAR_MAX_SIZE-1] = 0;
 
-		if(!_stricmp(pcFindDirA, "/sys"))
+		if(!_stricmp(pcFindDirA, "/sys") || !_stricmp(pcFindDirA, "/proc") || !_stricmp(pcFindDirA, "/lib") || !_stricmp(pcFindDirA, "/lib64"))
+		{
+			WriteLog("skip path : [%s]", pcFindDirA);
+			nRetVal = 0;
+			break;
+		}
+		else if(!_stricmp(pcFindDirA, "/usr/src") || !_stricmp(pcFindDirA, "/usr/include") || !_stricmp(pcFindDirA, "/var/lib"))
 		{
 			WriteLog("skip path : [%s]", pcFindDirA);
 			nRetVal = 0;
@@ -728,6 +740,12 @@ INT32		CFindFileUtil::Recursive_SearchDir(UINT32 nOrderID, char *pcRootPath, cha
 						}
 						dwFileLen = 0;
 						get_file_size(pcSubAddPathA, &dwFileLen);
+
+						if(IsElfFileType(pcSubAddPathA, pcChkFileA) != 0)
+						{
+							continue;
+						}
+
 						tAFFI.nFileSize		= dwFileLen;
 						tFindFileItemList->push_back(tAFFI);
 						WriteLog("find to file %s (%d) (%d) (%d)", pcSubAddPathA, nMatchType, tFindFileItemList->size(), (INT32)gettid());
@@ -766,6 +784,7 @@ INT32		CFindFileUtil::Recursive_SearchFile(UINT32 nOrderID, String strSearchPath
 	UINT32 nMatchType = 0;
 	UINT32 dwFileLen = 0;
 	FIND_FILE_ITEM tAFFI;
+	INT32 nType = 0;
 
 	memset(&tAFFI, 0, sizeof(tAFFI));
 	pDir = opendir(strChkDirA.c_str());
@@ -806,6 +825,12 @@ INT32		CFindFileUtil::Recursive_SearchFile(UINT32 nOrderID, String strSearchPath
 			{	
 				strDirA = strChkDirA + "/" + strFileNameA;
 				get_file_size(strDirA.c_str(), &dwFileLen);
+
+				if(IsElfFileType((char *)strDirA.c_str(), (char *)strFileNameA.c_str()) != 0)
+				{
+					continue;
+				}
+
 				tAFFI.nFileSize		= dwFileLen;
 				tAFFI.strFilePath	= strChkDirA;
 				tAFFI.strFileName	= strFileNameA;
@@ -840,7 +865,10 @@ INT32		CFindFileUtil::Recursive_SearchDirFile(UINT32 nOrderID, String strSearchP
 	memset(&tAFFI, 0, sizeof(tAFFI));
 	if(strSubDir.empty() == FALSE)
 	{
-		strFindDirA = SPrintf("%s/%s", strSearchPath.c_str(), strSubDir.c_str());
+		if(strSearchPath.length() == 1)
+			strFindDirA = SPrintf("%s/%s", strSearchPath.c_str(), strSubDir.c_str());
+		else
+			strFindDirA = SPrintf("%s/%s", strSearchPath.c_str(), strSubDir.c_str());
 	}
 	else
 	{
@@ -1613,13 +1641,13 @@ BOOL CFindFileUtil::SetWildString(char *pBaseName, PFILE_WILD_INFO pEntry)
 
 	if (pStart == pLast)
 	{
-		if (*pStart == '*')  /* * Çü½Ä */
+		if (*pStart == '*')  /* * í˜•ì‹ */
 		{
 			pEntry->nWildType = FILE_WILD_ALL;
 			return TRUE;
 		}
 	}
-	else if (*pStart == '*')  /* *.txt Çü½Ä */
+	else if (*pStart == '*')  /* *.txt í˜•ì‹ */
 	{
 		pEntry->nWildType = FILE_WILD_PRE;
 		strncpy(pEntry->acBaseName, pStart + 1, MAX_FILE_NAME-1);
@@ -1627,7 +1655,7 @@ BOOL CFindFileUtil::SetWildString(char *pBaseName, PFILE_WILD_INFO pEntry)
 		pEntry->nWildLen = (INT32)strlen(pEntry->acBaseName);
 		return TRUE;
 	}
-	else if (*pLast == '*')  /* aa.*' Çü½Ä */
+	else if (*pLast == '*')  /* aa.*' í˜•ì‹ */
 	{
 		pEntry->nWildType = FILE_WILD_POST;
 		strncpy(pEntry->acBaseName, pStart, MAX_FILE_NAME-1);
@@ -2205,11 +2233,13 @@ INT32		CFindFileUtil::GetFindFileItem(UINT32 nOrderID, PASI_FF_FILE_ITEM pAFFI, 
 				if(!pAFFR->nContinue && !pAFFR->nMoreFileItem)
     	            pSFFW->nContinue = 0;
 			}
-			if(pSFFW->nSameSearcheCnt > 300)
+/*
+			if(pSFFW->nSameSearcheCnt > 3000)
 			{
 				pAFFR->nContinue = 0;
 				pAFFR->nMoreFileItem = 0;
 			}
+*/
 			if(!pSFFW->nContinue)
 			{
 				pAFFR->nContinue = 0;
@@ -2254,7 +2284,22 @@ INT32		CFindFileUtil::IsDocFileFormat(LPCTSTR pFilePath, INT32 *pnFileType)
 	return 0;
 }
 
+INT32		CFindFileUtil::IsElfFileType(char *pFilePath, char *pFileName)
+{
+	ASI_DFILE_FMT_INFO tADFI;
+	INT32 nElfType = ASI_FI_ELF_TYPE_NONE;
+	if(pFilePath == NULL || m_tASIFIDLLUtil == NULL)
+		return -1;
+	if(pFileName != NULL || pFileName[0] != 0)
+	{
+		if(strstr(pFileName, ".so") != NULL)
+			return -2;
+	}
+	nElfType = m_tASIFIDLLUtil->ASIFI_GetFileElfType(pFilePath, pFileName);
+	if(nElfType == ASI_FI_ELF_TYPE_EXE || nElfType == ASI_FI_ELF_TYPE_SCRIPTS)
+	{
+		return 0;
+	}
 
-
-
-
+	return -3;
+}
