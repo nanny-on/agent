@@ -100,7 +100,7 @@ typedef uint64_t	DDWORD;
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-/* ∑Œ±Î ø…º« (bit-OR) */
+/* Î°úÍπÖ ÏòµÏÖò (bit-OR) */
 #define ASIEPS_LOGOPT_NONE			0x00
 #define ASIEPS_LOGOPT_ALLOW			0x01
 #define ASIEPS_LOGOPT_DENY			0x02
@@ -108,6 +108,53 @@ typedef uint64_t	DDWORD;
 #define ASIEPS_LOGOPT_SO_FILE		0x08
 #define ASIEPS_LOGOPT_SO_REG		0x10
 //------------------------------------------------------------------------
+
+
+#define		ASI_EPS_APP_POLICY_GROUP_TYPE_NIMS				1
+#define		ASI_EPS_APP_POLICY_GROUP_TYPE_NOMS				2
+#define		ASI_EPS_APP_POLICY_GROUP_TYPE_COMMON			3
+#define		ASI_EPS_APP_POLICY_GROUP_TYPE_NUMBER			3
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTL_PANEL			10000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_SELF_PROTECT		20000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTRL_PROC			21000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTRL_DV				22000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTRL_REG			23000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTL_SHARE_FILE		24000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FA_OP				30000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FA_CLEAR			31000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FA_PROC				32000
+
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_OP			34000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_LO			35000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_BL			36000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_WL			37000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_EX			38000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_NC_PTN_SP			39000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FE_PTN_OP			40000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FE_PTN_LO			41000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FE_PTN_BL			42000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FE_PTN_WL			43000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_FE_EXCLUDE			44000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_PR_OP				50000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_CTL_MEDIA			51000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_OP			52000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL			53000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL			54000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_EX			55000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_SP			56000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_RS_OP			57000
+#define		ASI_EPS_APP_POLICY_GROUP_ID_IN_VULN_OP			58000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_SELF_PROTECT_SVR	60000
+
+#define		ASI_EPS_APP_POLICY_GROUP_ID_MAX					65000
 
 
 #define ASIEPS_LOGREC_NONE				0x00000000
@@ -209,6 +256,11 @@ typedef uint64_t	DDWORD;
 #define		ASI_EPS_APP_LOG_TYPE_RS_BK					7
 #define		ASI_EPS_APP_LOG_TYPE_PO_NC_PTN_EX_TRUST		8
 #define		ASI_EPS_APP_LOG_TYPE_SITE_FILE_ALIAS		9
+
+#define		ASI_EPS_LOG_TYPE_DENY					0x00000010
+#define		ASI_EPS_LOG_TYPE_ALLOW					0x00000020
+#define		ASI_EPS_LOG_TYPE_WARN					0x00000040
+
 //------------------------------------------------------------------------
 
 typedef enum _notification_command
@@ -361,12 +413,12 @@ typedef struct _as_conf_mode
 #define ACL_WILDCARD_LEN			23
 #define AS_GROUP_RULE_NAME_MAX 		31
 
-/* wildcard ªÁøÎ πÆ¿⁄ø≠ ¡§∫∏ */
+/* wildcard ÏÇ¨Ïö© Î¨∏ÏûêÏó¥ Ï†ïÎ≥¥ */
 typedef struct _wildstr_entry
 {
 	INT32		nWildType;       /* WILDTYPE_xxx */
-	INT32		nWildLen;        /* wildcard ªÁøÎ πÆ¿⁄ø≠ ±Ê¿Ã */
-	CHAR		szWildStr[ACL_WILDCARD_LEN+1];  /* wildcard ªÁøÎ πÆ¿⁄ø≠ (wildcard ¡¶ø‹) */
+	INT32		nWildLen;        /* wildcard ÏÇ¨Ïö© Î¨∏ÏûêÏó¥ Í∏∏Ïù¥ */
+	CHAR		szWildStr[ACL_WILDCARD_LEN+1];  /* wildcard ÏÇ¨Ïö© Î¨∏ÏûêÏó¥ (wildcard Ï†úÏô∏) */
 } WILDSTR_ENTRY, *PWILDSTR_ENTRY;
 
 typedef struct _rule_entry 
@@ -383,7 +435,7 @@ typedef struct _rule_entry
 	CHAR			szSid[AS_SID_MAX];			/* User Sid 128Bytes */	
 	CHAR			szGroupSid[AS_SID_MAX];			/* Group Sid 128Bytes */	
 	CHAR			szProcessPath[AS_PROC_PATH_MAX];		/* program name 256 Bytes */
-	WILDSTR_ENTRY 	stProcWild;				/* proc wildcard ªÁøÎ πÆ¿⁄ø≠ ¡§∫∏ */
+	WILDSTR_ENTRY 	stProcWild;				/* proc wildcard ÏÇ¨Ïö© Î¨∏ÏûêÏó¥ Ï†ïÎ≥¥ */
 } RULE_ENTRY, *PRULE_ENTRY;
 
 typedef struct _object_entry 
