@@ -41,12 +41,19 @@
 #define MSG_RN				0
 
 #define MAKEUINT64(a, b) 	((UINT64) (((UINT32) (a)) | ((UINT64) ((UINT32) (b))) << 32)) 
+
 #define HIUINT64(l)    		((UINT32) (((UINT64) (l) >> 32) & 0xFFFFFFFF))
 #define LOUINT64(I)   	 	((UINT32)(I))
 
 #define MAKEUINT32(a, b) 	((UINT32) (((UINT16) (a)) | ((UINT32) ((UINT16) (b))) << 16)) 
+
+#ifndef HIUINT32
 #define HIUINT32(l)    		((UINT16) (((UINT32) (l) >> 16) & 0xFFFFFFFF))
+#endif
+
+#ifndef LOUINT32
 #define LOUINT32(I)   	 	((UINT16)(I))
+#endif
 
 #define MAKEUINT8(l, h) 	((UINT8) (((UINT8) (l)) | ((UINT8) ((h))) << 4)) 
 #define HIUINT8(n)    		((UINT8) (((UINT8) (n) >> 4) & 0xFF))
