@@ -25,10 +25,10 @@
 #include "FileInfoDLLUtil.h"
 #include "DocFileFmtDLLUtil.h"
 
-#define FILE_WILD_NONE	0  /* wildcard »ç¿ë ¾ÈÇÔ */
-#define FILE_WILD_ALL	1  /* '*' Çü½Ä */
-#define FILE_WILD_PRE	2  /* '*data' Çü½Ä */
-#define FILE_WILD_POST	3  /* 'data*' Çü½Ä */
+#define FILE_WILD_NONE	0  /* wildcard ì‚¬ìš© ì•ˆí•¨ */
+#define FILE_WILD_ALL	1  /* '*' í˜•ì‹ */
+#define FILE_WILD_PRE	2  /* '*data' í˜•ì‹ */
+#define FILE_WILD_POST	3  /* 'data*' í˜•ì‹ */
 
 typedef struct _file_wild_info
 {
@@ -53,6 +53,7 @@ private:
 	TMapIDListStr		m_tSearchListMap;
 	TMapIDMap			m_tFileDTMap;
 	TMapID				m_tFindOptionMap;
+	INT32				m_nCount;
 	
 
 private:
@@ -179,6 +180,7 @@ public:
 	INT32		SearchDirFile(UINT32 nOrderID);
 	INT32		GetFindFileItem(UINT32 nOrderID, PASI_FF_FILE_ITEM pAFFI, PUINT32 nBufNum, PASI_FF_FILE_RESULT pAFFR);
 	INT32		IsDocFileFormat(LPCTSTR pFilePath, INT32 *pnFileType);
+	INT32		IsElfFileType(char *pFilePath, char *pFileName);
 	INT32		Stop();
 	INT32		Stop(UINT32 nOrder);
 
