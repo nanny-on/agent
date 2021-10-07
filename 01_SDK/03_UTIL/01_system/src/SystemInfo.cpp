@@ -36,18 +36,21 @@ CSystemInfo::CSystemInfo()
 	m_nSystemPaType	= PROCESSOR_ARCHITECTURE_INTEL;
 	m_nSystemID = 0;
 	m_nSystemType = 0;
+	m_nCpuCoreNum = 0;
 	memset(m_acOSName, 0, MAX_QHBUFF);
 	memset(m_acRelease, 0, MAX_QHBUFF);
 	memset(m_acSystem, 0, MAX_QHBUFF);
 	memset(m_acIpAddr, 0, MAX_QHBUFF);
 	memset(m_acHostName, 0, MAX_QHBUFF);
 	memset(m_acMachine, 0, MAX_TYPE_LEN);
+	pthread_mutex_init(&m_mutex, NULL);
 	GetCurrentSystemInfo();
 }
 //---------------------------------------------------------------------------
 
 CSystemInfo::~CSystemInfo()
 {
+	pthread_mutex_destroy(&m_mutex);
 }
 //---------------------------------------------------------------------------
 
@@ -62,19 +65,19 @@ String CSystemInfo::GetSysName()
 String CSystemInfo::GetCompName()
 {
     String strResult = "";
+	pthread_mutex_lock (&m_mutex);
 	if(m_acHostName[0] != 0)
 	{
-//		strResult = String(m_acHostName);
 		strResult = m_acHostName;
 	}
 	else
 	{
 	    if(gethostname(m_acHostName, MAX_QHBUFF-1) == 0)
 	    {
-//	        strResult = String(m_acHostName);
 			strResult = m_acHostName;
 	    }
 	}
+	pthread_mutex_unlock (&m_mutex);
     return strResult;
 }
 //---------------------------------------------------------------------------
@@ -82,40 +85,58 @@ String CSystemInfo::GetCompName()
 String CSystemInfo::GetIpAddress()
 {
     String strIpAddr;
+	INT32 i = 0;
     struct hostent *pHostEnt = NULL;
-	if(m_acIpAddr[0] != 0)
-	{
+	struct in_addr **ppAddrList = NULL;
+	pthread_mutex_lock (&m_mutex);
+	do{
+		if(m_acIpAddr[0] != 0)
+		{
+			strIpAddr = m_acIpAddr;
+			break;
+		}
+		if(m_acHostName[0] == 0)
+		{
+			GetCompName();
+		}
+		pHostEnt = gethostbyname(m_acHostName);
+		if(pHostEnt == NULL || pHostEnt->h_addr_list[0] == NULL)
+		{
+			strIpAddr.empty();
+			break;
+		}
+		ppAddrList = (struct in_addr **)pHostEnt->h_addr_list;
+		for(i = 0; ppAddrList[i] != NULL; i++)
+		{
+			strncpy(m_acIpAddr, (char *)inet_ntoa(*ppAddrList[i]), MAX_QHBUFF-1);
+			break;
+		}
 		strIpAddr = m_acIpAddr;
-	    return strIpAddr;
-
-	}
-	if(m_acHostName[0] == 0)
-	{
-		GetCompName();
-	}
-	pHostEnt = gethostbyname(m_acHostName);
-    if(pHostEnt == NULL)
-    {
-        return "" ;
-    }
-    strncpy(m_acIpAddr, (char *)inet_ntoa(*(struct in_addr *)*pHostEnt->h_addr_list), MAX_QHBUFF-1);
-//	strIpAddr = String(m_acIpAddr);
-	strIpAddr = m_acIpAddr;
+	}while(FALSE);
+	pthread_mutex_unlock (&m_mutex);
     return strIpAddr;
 
 }
 //---------------------------------------------------------------------------
 
-BOOL CSystemInfo::GetCurrentSystemInfo()
+BOOL CSystemInfo::InitHostInfo()
 {
 	struct utsname uname_data;
+	BOOL bRetVal = TRUE;
+	pthread_mutex_lock (&m_mutex);
 
-	if(m_acMachine[0] == 0 || m_acHostName[0] == 0 || m_acRelease[0] == 0)
-	{
+	do{
+		if(m_acMachine[0] != 0 && m_acHostName[0] != 0 && m_acRelease[0] != 0 && m_nSystemPaType != 0)
+		{
+			bRetVal = TRUE;
+			break;
+		}
 		memset(&uname_data, 0, sizeof(struct utsname));
 		if(uname(&uname_data) == -1)
-			return FALSE;
-
+		{
+			bRetVal = FALSE;
+			break;
+		}
 		strncpy(m_acMachine, uname_data.machine, MAX_TYPE_LEN-1);
 		if(!_stricmp(m_acMachine, "x86_64"))
 		{
@@ -131,15 +152,61 @@ BOOL CSystemInfo::GetCurrentSystemInfo()
 		}
 		strncpy(m_acHostName, uname_data.nodename, MAX_TYPE_LEN-1);
 		strncpy(m_acRelease, uname_data.release, MAX_QHBUFF-1);
-	}
-	if(m_acOSName[0] == 0 || m_nSystemID == 0 || m_nSystemType == 0)
-		get_os_info(m_acOSName, MAX_QHBUFF, &m_nSystemID, &m_nSystemType);
+		bRetVal = TRUE;
+	}while(FALSE);
+	pthread_mutex_unlock (&m_mutex);
+	return bRetVal;
+}
+
+BOOL CSystemInfo::InitSystemInfo()
+{
+	struct utsname uname_data;
+	BOOL bRetVal = TRUE;
+	pthread_mutex_lock (&m_mutex);
+
+	do{
+		if(m_acSystem[0] != 0)
+		{
+			bRetVal = TRUE;
+			break;
+		}
+		if(get_system_name(m_acSystem, MAX_QHBUFF) != 0)
+		{
+			bRetVal = FALSE;
+			break;
+		}
+		bRetVal = TRUE;
+	}while(FALSE);
+	pthread_mutex_unlock (&m_mutex);
+	return bRetVal;
+}
+
+VOID CSystemInfo::InitOSInfo()
+{
+	pthread_mutex_lock (&m_mutex);
+	do{
+		if(m_acOSName[0] != 0 && m_nSystemID != 0 && m_nSystemType != 0)
+		{
+			break;
+		}
+		get_os_info(m_acOSName, MAX_QHBUFF-1, &m_nSystemID, &m_nSystemType);
+	}while(FALSE);
+	pthread_mutex_unlock (&m_mutex);
+}
+
+BOOL CSystemInfo::GetCurrentSystemInfo()
+{
+	if(InitHostInfo() == FALSE)
+		return FALSE;
+
+	InitOSInfo();
+
 	GetCompName();
 	GetIpAddress();
-	if(m_acSystem[0] == 0)
+
+	if(InitSystemInfo() == FALSE)
 	{
-		if(get_system_name(m_acSystem, MAX_QHBUFF) != 0)
-			return FALSE;
+		return FALSE;
 	}
     return TRUE;
 }
@@ -148,7 +215,10 @@ BOOL CSystemInfo::GetCurrentSystemInfo()
 
 String CSystemInfo::GetSystemConvertName()
 {
-	String strResult = m_acOSName;
+	String strResult;
+	pthread_mutex_lock (&m_mutex);
+	strResult = m_acOSName;
+	pthread_mutex_unlock (&m_mutex);
 	GetSystemProcArchName(strResult);
 	return strResult;
 }
@@ -157,52 +227,76 @@ String CSystemInfo::GetSystemConvertName()
 
 UINT64    CSystemInfo::GetSystemID()
 {
-    return m_nSystemID;
+	UINT64 nSystemID = 0;
+	pthread_mutex_lock (&m_mutex);
+	nSystemID = m_nSystemID;
+	pthread_mutex_unlock (&m_mutex);
+    return nSystemID;
 }
 //---------------------------------------------------------------------------
 
 UINT32    CSystemInfo::GetSPID()
 {
-    return m_nSPID;
+	UINT64 nSPID = 0;
+	pthread_mutex_lock (&m_mutex);
+	nSPID = m_nSPID;
+	pthread_mutex_unlock (&m_mutex);
+	return nSPID;
 }
 //---------------------------------------------------------------------------
 
 UINT32	CSystemInfo::GetSysProcArchitecture()
 {
-	return m_nSystemPaType;
+	UINT64 nSystemPaType = 0;
+	pthread_mutex_lock (&m_mutex);
+	nSystemPaType = m_nSystemPaType;
+	pthread_mutex_unlock (&m_mutex);
+
+	return nSystemPaType;
 }
 //---------------------------------------------------------------------------
 
 UINT64	CSystemInfo::GetASIProcArchitecture()
 {
+	UINT64 nProcArch = 0;
+	pthread_mutex_lock (&m_mutex);
 	if(m_nSystemPaType == PROCESSOR_ARCHITECTURE_INTEL)
 	{
-		return ASI_SYSTEM_ARCH_X86;
+		nProcArch = ASI_SYSTEM_ARCH_X86;
 	}
 	else if(m_nSystemPaType == PROCESSOR_ARCHITECTURE_AMD64)
 	{
-		return ASI_SYSTEM_ARCH_X64;
+		nProcArch = ASI_SYSTEM_ARCH_X64;
 	}
 	else if(m_nSystemPaType == PROCESSOR_ARCHITECTURE_ARM)
 	{
-		return ASI_SYSTEM_ARCH_ARM;
+		nProcArch = ASI_SYSTEM_ARCH_ARM;
 	}
-	
-	return 0;
+	pthread_mutex_unlock (&m_mutex);
+	return nProcArch;
 }
 //---------------------------------------------------------------------------
 
 UINT32	CSystemInfo::GetSysProcessNumber()
 {
 	UINT32 dwCount = 0;
-	dwCount = (UINT32)get_cpu_core_num();
+	pthread_mutex_lock (&m_mutex);
+	if(m_nCpuCoreNum == 0)
+		m_nCpuCoreNum = (UINT32)get_cpu_core_num();
+	dwCount = m_nCpuCoreNum;
+	pthread_mutex_unlock (&m_mutex);
 	return dwCount;
 }
 //---------------------------------------------------------------------------
 
 void	CSystemInfo::GetSystemProcArchName(String& strName)
 {
-	switch(m_nSystemPaType)
+	UINT64 nSystemPaType = 0;
+	pthread_mutex_lock (&m_mutex);
+	nSystemPaType = m_nSystemPaType;
+	pthread_mutex_unlock (&m_mutex);
+
+	switch(nSystemPaType)
 	{
 	case PROCESSOR_ARCHITECTURE_AMD64:
 		strName += ", 64-bit";
@@ -216,36 +310,12 @@ void	CSystemInfo::GetSystemProcArchName(String& strName)
 
 INT32	CSystemInfo::IsExistLoginSession()
 {
-	CProcUtil tProcUtil;
-	TListID tPIDList;
-	{
-		tProcUtil.GetEnumProcessID("explorer.exe", tPIDList);
-	}
-	return tPIDList.size();
+	return 0;
 }
 //---------------------------------------------------------------------------
 
 INT32	CSystemInfo::GetLoginSessionIDList(TListID& tSIDList)
 {
-	CProcUtil tProcUtil;
-	
-	TMapID tSIDMap;
-	TListID tPIDList;
-	{
-		tProcUtil.GetEnumProcessID("explorer.exe", tPIDList);
-	}
-
-	TListIDItor begin, end;
-	begin = tPIDList.begin();	end = tPIDList.end();
-	for(begin; begin != end; begin++)
-	{
-		UINT32 nPSID = tProcUtil.GetProcessSessionID(*begin);
-		
-		tSIDMap[nPSID] = 0;					
-	}
-	
-	ConvertMapToList(tSIDMap, tSIDList);
 	return 0;
 }
 //---------------------------------------------------------------------------
-
