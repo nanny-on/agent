@@ -27,6 +27,9 @@ class CSystemInfo
 {
 private :
 //  BOOL	GetCurrentServicePack(String strServicePack);
+	BOOL	InitHostInfo();
+	VOID	InitOSInfo();
+	BOOL	InitSystemInfo();
     BOOL	GetCurrentSystemInfo();
     String 	GetSystemConvertName();
 
@@ -46,7 +49,9 @@ private:
     UINT64  m_nSystemID;
 	UINT32  m_nSystemPdType;
 	UINT32	m_nSystemPaType;
-    UINT32  m_nSPID;    
+    UINT32  m_nSPID;
+	UINT32  m_nCpuCoreNum;
+	pthread_mutex_t m_mutex;
 
 public :
     String	GetSysName();
