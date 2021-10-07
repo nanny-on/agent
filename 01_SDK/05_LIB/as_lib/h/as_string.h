@@ -38,7 +38,6 @@ extern void ReverseLPTSTR(LPTSTR lpInput);
 extern String ConvertAnsiString(StringW strInputW);
 extern StringW ConvertWideString(String strInput);
 extern String ReverseStr(String strInput);
-extern CString ReverseCStr(CString strInput);
 extern LPTSTR ConvertLPTSTR(String& strValue);
 extern String&	EmptyStr(String& strValue);
 extern LPTSTR FindReverChar(LPCTSTR lpSrc, CHAR chFind);

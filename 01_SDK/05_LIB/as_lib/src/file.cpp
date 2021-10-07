@@ -254,7 +254,11 @@ int is_file(LPCSTR pcPath)
 		return REG_FILE;
 	else if (S_ISDIR(stStat.st_mode))
 		return DIR_FILE;
-	
+	else if (S_ISFIFO(stStat.st_mode))
+		return FIFO_FILE;
+	else if(S_ISSOCK(stStat.st_mode))
+		return SOCK_FILE;
+
 	return -1;
 }
 

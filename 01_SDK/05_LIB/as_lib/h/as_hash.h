@@ -22,9 +22,11 @@
 
 #define ASIHASH_SHA_LEN_TYPE_128		0
 #define ASIHASH_SHA_LEN_TYPE_256		1
+#define ASIHASH_SHA_LEN_TYPE_512		2
 
 #define ASIHASH_SHA_TYPE_128_LEN		40
 #define ASIHASH_SHA_TYPE_256_LEN		64
+#define ASIHASH_SHA_TYPE_512_LEN		128
 
 extern INT32 SHAString(INT32 nLenType, LPCSTR lpString, INT32 nInLen, LPTSTR lpBuffer, INT32 nOutLen);
 extern INT32 SHAByte(INT32 nLenType, LPCSTR lpString, INT32 nInLen, BYTE* lpBuffer, INT32 nOutLen);

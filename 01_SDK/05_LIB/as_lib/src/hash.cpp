@@ -20,6 +20,7 @@
 #include "stdafx.h"
 #include "as_sha1.h"
 #include "as_sha256.h"
+#include "as_sha512.h"
 #include "as_file.h"
 #include "as_hash.h"
 
@@ -39,6 +40,14 @@ INT32 SHAString(INT32 nLenType, LPCSTR lpString, INT32 nInLen, LPTSTR lpBuffer, 
 	else if(nLenType == ASIHASH_SHA_LEN_TYPE_256)
 	{
 		nRetVal = get_sha256_hash((char *)lpString, nInLen, lpBuffer, nOutLen);
+	}
+	else if(nLenType == ASIHASH_SHA_LEN_TYPE_512)
+	{
+		nRetVal = get_sha512_hash((char *)lpString, nInLen, lpBuffer, nOutLen);
+	}
+	else
+	{
+		return -2;
 	}
 	return nRetVal;
 }
@@ -60,7 +69,14 @@ INT32 SHAByte(INT32 nLenType, LPCSTR lpString, INT32 nInLen, BYTE* lpBuffer, INT
 	{
 		nRetVal = get_sha256_digest((char *)lpString, nInLen, lpBuffer, nOutLen);
 	}
-
+	else if(nLenType == ASIHASH_SHA_LEN_TYPE_512)
+	{
+		nRetVal = get_sha512_digest((char *)lpString, nInLen, lpBuffer, nOutLen);
+	}
+	else
+	{
+		return -2;
+	}
 	return nRetVal;
 }
 //-----------------------------------------------------------------
@@ -93,6 +109,14 @@ INT32 	SHAFile(INT32 nLenType, LPCSTR lpFileName, LPTSTR lpBuffer, INT32 nOutLen
 	else if(nLenType == ASIHASH_SHA_LEN_TYPE_256)
 	{
 		nRetVal = get_sha256_hash_from_file((char *)lpFileName, lpBuffer, nOutLen);
+	}
+	else if(nLenType == ASIHASH_SHA_LEN_TYPE_512)
+	{
+		nRetVal = get_sha512_hash_from_file((char *)lpFileName, lpBuffer, nOutLen);
+	}
+	else
+	{
+		return -2;
 	}
 	return nRetVal;
 }

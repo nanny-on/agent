@@ -545,18 +545,6 @@ String		ReverseStr(String strInput)
 	return strRtn;
 }
 
-CString		ReverseCStr(CString strInput)
-{
-	CString strRtn;
-	INT32 nLen = strInput.GetLength();
-	LPCTSTR lpInput = (LPCTSTR)strInput;
-	strRtn.Empty();
-	for(INT32 i = nLen; i > 0; i--)
-	{
-		strRtn += lpInput[i-1];
-	}
-	return strRtn;
-}
 //-------------------------------------------------------------------------
 
 LPTSTR	ConvertLPTSTR(String& strValue)
