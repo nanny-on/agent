@@ -180,7 +180,7 @@ INT32		CASIDBFUtil::FastSetAutoIncrementID(PDBF_TABLE_SEARCH pdts, PDBF_TABLE_IT
 		if((tDTC.nColOption & ASI_DBF_COL_OPTION_FLAG_AUTO_INC) == 0)	continue;
 		
 		UINT64 nBufInfo = GetBuffLengthAll(tHLenMap, nItemIdx);
-		PBYTE lpChkBuff = lpBuff + HIUINT32(nBufInfo);
+		PBYTE lpChkBuff = lpBuff + HIUINT64(nBufInfo);
 		DBF_ITEM_RTN tDIR;
 
 		switch(tDTC.nMemberType)
@@ -1023,12 +1023,13 @@ INT32				CASIDBFUtil::FastUpdateDBF_TItem(PDBF_TABLE_SEARCH pdts, PDBF_TABLE_ITE
 			}	
 		}
 		SetFilePointerEx(ASI_DBF_FILE_HANDLE_WRITE, nCurFP);
+		nRtn = 0;
 	} while (FALSE);
 
 	tDFBI_Item._clear();
 	if(lpEncBuff)	FreeCommonBuff(&lpEncBuff);
 
-	return 0;
+	return nRtn;
 }
 //---------------------------------------------------------------------
 //---------------------------------------------------------------------
@@ -1101,8 +1102,8 @@ INT32		CASIDBFUtil::FastSetFilePointerEx(CASIDBFMember* pMember, UINT32 nMode, U
 	HANDLE hFile = GetFileHandle(nMode);	
 	if(!hFile)		return ASI_DBF_ERROR_TYPE_FILE_HANDLE_NULL;
 
-	LONG nHigh = HILONG(nFileFP);
-	LONG nLow = LOLONG(nFileFP);
+//	LONG nHigh = HILONG(nFileFP);
+//	LONG nLow = LOLONG(nFileFP);
 
 	if(nFileFP < pMember->m_nFastSFilePoint || pMember->m_nFastEFilePoint <= nFileFP)
 	{
