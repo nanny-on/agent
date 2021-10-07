@@ -40,6 +40,9 @@
 //Socket define header
 #include "com_define_socket.h"
 
+//Pipe define header
+#include "com_define_pipe.h"
+
 //policy define header
 #include "com_define_policy.h"
 

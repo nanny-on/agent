@@ -177,6 +177,8 @@
 #include	"ThreadPoNcPtnScan.h"
 #include	"ThreadPoFaExPopup.h"
 #include	"ThreadPoInPtnFile.h"
+#include	"ThreadPoInAccFile.h"
+#include	"ThreadPoInSpReq.h"
 ///////////////////////////////////////////////////////////////////////
 
 #include	"Manage_Header.h"

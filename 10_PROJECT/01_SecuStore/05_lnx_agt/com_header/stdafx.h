@@ -44,6 +44,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <poll.h>
 #include <dlfcn.h>
 #include <iostream> 
 #include <pthread.h>
@@ -59,14 +60,18 @@
 #include <mntent.h>
 #include <uuid/uuid.h>
 #include <sys/sysinfo.h>
+#include <sys/shm.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/timeb.h>
+#include <sys/resource.h>
 #include <sys/vfs.h>
 #include <sys/inotify.h>
+#include <sys/fanotify.h>
 #include <sys/wait.h>
 #include <net/if.h>
 #include <arpa/inet.h>
@@ -156,6 +161,8 @@ typedef wstring StringW;
 
 #define	REG_FILE		0
 #define DIR_FILE		1
+#define FIFO_FILE		2
+#define SOCK_FILE		3
 
 #define	TCHAR_MAX_SIZE	1024
 #define	CHAR_MAX_SIZE	1024
@@ -173,13 +180,19 @@ typedef wstring StringW;
 #define MAX_QQBUFF		64
 #define MAX_TYPE_LEN	32
 #define MAX_NETADDR_LEN	128
+#define	HASH_PADDING_LEN	8
+#define	SHA512_BLOCK_SIZE	128
+
 
 #define AS_FILE_READ_MAX	4096
 
 
 #define INVALID_SOCKET	-1
 #define SOCKET_ERROR	-1
-#define INVALID_HANDLE_VALUE -1
+
+#ifndef INVALID_HANDLE_VALUE
+#define INVALID_HANDLE_VALUE ((HANDLE)((LONG*)(-1)))
+#endif
 
 #define WM_USER 	0x0400
 #define WM_CLOSE	0x0010
@@ -189,10 +202,30 @@ typedef wstring StringW;
 #define NANNY_AGENT_IDENT		"nannysvc"
 #define PWEVT_MON_VERSION		"2.0.4.1"
 #define PWEVT_MON_IDENT			"pwevt_mon"
+
+#define FANOTIFYD_VERSION		"2.0.4.1"
+#define FANOTIFYD_IDENT			"fanotifyd"
+
+#define ACCNOTIFYD_VERSION		"2.0.4.1"
+#define ACCNOTIFYD_IDENT		"accnotifyd"
+
 #define NANNY_UPDATE_IDENT		"update"
 #define NANNY_AGENT_DIR			"nanny"
 #define NANNY_UTIL_DIR			".tools"
 
+#define NANNY_INSTALL_DIR		"/usr/local/ashin"
+#define NANNY_INSTALL_DIR_LEN	16
+
+
+#define REQ_WHITE_PATH		"/bin/reqwhite"
+
+
+#define UNIX_SOCK_FILE		"white_check_socket"
+#define UNIX_SOCK_ACC_FILE  "access_check_socket"
+#define UNIX_SOCK_POL_FILE  "access_policy_socket"
+
+#define ASHIN_STRING_CLS_NAME "ASSTRING_938EF200_F60B_452A"
+#define ASHIN_STRING_CLS_NAME_W L"ASSTRING_938EF200_F60B_452A"
 
 #define	safe_free(x)   if(x != NULL) { free(x);x=NULL; }
 #define	ZeroMemory(x,y) memset((x), 0, (y))
@@ -221,7 +254,9 @@ typedef wstring StringW;
 #define DRIVE_CDROM       5
 #define DRIVE_RAMDISK     6
 #define MAKEWORD(a, b)      ((WORD)(((BYTE)(((DWORD)(a)) & 0xff)) | ((WORD)((BYTE)(((DWORD)(b)) & 0xff))) << 8))
+#ifndef MAKELONG
 #define MAKELONG(a, b)      ((LONG)(((WORD)(((DWORD)(a)) & 0xffff)) | ((LONG)((WORD)(((DWORD)(b)) & 0xffff))) << 16))
+#endif
 #define MAKELONGLONG(a, b)      ((LONGLONG)(((LONG)(((LONG)(a)) & 0xffffffff)) | ((LONGLONG)((LONG)(((LONG)(b)) & 0xffffffff))) << 32))
 
 #define LOWORD(l)           ((WORD)(((DWORD)(l)) & 0xffff))
@@ -259,6 +294,21 @@ typedef struct _SYSTEMTIME {
     WORD wMilliseconds;
 } SYSTEMTIME, *PSYSTEMTIME, *LPSYSTEMTIME;
 
+typedef struct {
+	unsigned int gp_offset;
+	unsigned int fp_offset;
+	void *overflow_arg_area;
+	void *reg_save_area;
+} va_list_tag_ex;
+
+typedef struct _asi_file_hash
+{
+	char acFullPath[MAX_PATH];
+	char acWhiteHash[SHA512_BLOCK_SIZE+HASH_PADDING_LEN];
+}ASI_FILE_HASH, *PASI_FILE_HASH;
+
+typedef list<ASI_FILE_HASH>				TListFileHashInfo;
+typedef TListFileHashInfo::iterator		TListFileHashInfoItor;
 
 #endif /*_STDAFX_H__*/
 
