@@ -34,7 +34,15 @@ CManagePtnProcFile::CManagePtnProcFile()
 
 CManagePtnProcFile::~CManagePtnProcFile()
 {
-	if(m_tDBMgrPtnProcFile)		{	delete m_tDBMgrPtnProcFile;		m_tDBMgrPtnProcFile = NULL;	}
+	ClearWPathStr();
+	ClearKeyList();
+	ClearSKeyID();
+	ClearItem();
+	if(m_tDBMgrPtnProcFile)
+	{
+		delete m_tDBMgrPtnProcFile;
+		m_tDBMgrPtnProcFile = NULL;
+	}
 }
 //---------------------------------------------------------------------------
 
@@ -45,19 +53,26 @@ void		CManagePtnProcFile::SetDBFQUtil(CASIDBFQDLLUtil*	tASIDBFQDLLUtil)
 
 INT32		CManagePtnProcFile::LoadDBMS()
 {
+	CString strFullPath;
+	char acPath[MAX_PATH] = {0,};
 	TListDBPtnProcFile tDBPtnProcFileList;
     TListDBPtnProcFileItor begin, end;
 	if(SetER(m_tDBMgrPtnProcFile->LoadExecute(&tDBPtnProcFileList)))
     {
     	return g_nErrRtn;
     }
-
+	ClearWPathStr();
     begin = tDBPtnProcFileList.begin();	end = tDBPtnProcFileList.end();
     for(begin; begin != end; begin++)
     {
+		snprintf(acPath, MAX_PATH-1,"%s%s", (char*)(LPCSTR)begin->strFilePath, (char*)(LPCSTR)begin->strFileName);
+		acPath[MAX_PATH-1] = 0;
+		strFullPath.Format("%s", acPath);
 		AddItem(begin->nID, *begin);
 		AddKeyList(begin->nID);
 		AddSKeyID(begin->strFeKey, begin->nID);
+		AddWPathStr(strFullPath, begin->strFeKey);
+		
     }
     return 0;
 }
@@ -65,14 +80,16 @@ INT32		CManagePtnProcFile::LoadDBMS()
 
 INT32					CManagePtnProcFile::AddPtnProcFile(DB_PTN_PROC_FILE&	data)
 {
+	CString strFullPath;
 	if(SetER(m_tDBMgrPtnProcFile->InsertExecute(&data)))
     {
     	return g_nErrRtn;
     }
-
+	strFullPath.Format("%s%s", (char*)(LPCSTR)data.strFilePath, (char*)(LPCSTR)data.strFileName);
 	AddItem(data.nID, data); 
 	AddKeyList(data.nID);
-	AddSKeyID(data.strFeKey, data.nID);   
+	AddSKeyID(data.strFeKey, data.nID);
+	AddWPathStr(strFullPath, data.strFeKey);
     return 0;
 }
 //---------------------------------------------------------------------------
@@ -88,6 +105,7 @@ INT32					CManagePtnProcFile::EditPtnProcFile(DB_PTN_PROC_FILE&	data)
 
 INT32					CManagePtnProcFile::DelPtnProcFile(UINT32 nID)
 {
+	CString strFullPath;
 	PDB_PTN_PROC_FILE pdata = FindItem(nID);
 	if(!pdata)	return ERR_INFO_NOT_DELETE_BECAUSE_NOT_FIND;
 
@@ -95,7 +113,8 @@ INT32					CManagePtnProcFile::DelPtnProcFile(UINT32 nID)
     {
     	return g_nErrRtn;
     }
-
+	strFullPath.Format("%s%s", (char*)(LPCSTR)pdata->strFilePath, (char*)(LPCSTR)pdata->strFileName);
+	DelWPathStr(strFullPath);
 	DelKeyList(pdata->nID);
 	DelSKeyID(pdata->strFeKey);
     DeleteItem(nID);

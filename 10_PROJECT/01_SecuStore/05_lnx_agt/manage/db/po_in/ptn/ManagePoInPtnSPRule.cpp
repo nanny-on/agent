@@ -132,20 +132,18 @@ String					CManagePoInPtnSPRule::GetHash()
 
 INT32					CManagePoInPtnSPRule::AddPoInPtnSPRule(DB_PO_IN_PTN_SP_RULE&	data)
 {
+	String strKey;
 	if(SetER(t_DBMgrPoInPtnSPRule->InsertExecute(&data)))
     {
     	return g_nErrRtn;
     }
+	strKey = SPrintf("%s_%s_%s", data.strFileKey.c_str(), data.strFilePath.c_str(), data.strFileName.c_str());
 
+	m_tDataMutex.Lock();
     AddItem(data.tDPH.nID, data);
 	AddPosSKeyID(data.strFileKey, data.tDPH.nID, POS_KEY_STR_POSITION_SP_RULE_FE_KEY);
-	{
-		String strKey;
-		strKey = SPrintf("%s_%s_%s", data.strFileKey.c_str(), data.strFilePath.c_str(), data.strFileName.c_str());
-//		strKey.MakeLower();
-		AddPosSKeyID(strKey, data.tDPH.nID, POS_KEY_STR_POSITION_SP_RULE_FE_FILE_PATH_KEY);
-	}
-
+	AddPosSKeyID(strKey, data.tDPH.nID, POS_KEY_STR_POSITION_SP_RULE_FE_FILE_PATH_KEY);
+	m_tDataMutex.UnLock();
     return 0;
 }
 //---------------------------------------------------------------------------
@@ -159,15 +157,16 @@ INT32					CManagePoInPtnSPRule::EditPoInPtnSPRule(DB_PO_IN_PTN_SP_RULE&	data)
     {
     	return g_nErrRtn;
     }
-
+	m_tDataMutex.Lock();
     EditItem(data.tDPH.nID, data);
-
+	m_tDataMutex.UnLock();
     return 0;
 }
 //---------------------------------------------------------------------------
 
 INT32					CManagePoInPtnSPRule::DelPoInPtnSPRule(UINT32 nID)
 {
+	String strKey;
 	PDB_PO_IN_PTN_SP_RULE pdata = FindItem(nID);
 	if(!pdata)	return ERR_DBMS_DELETE_FAIL;
 
@@ -175,16 +174,12 @@ INT32					CManagePoInPtnSPRule::DelPoInPtnSPRule(UINT32 nID)
     {
     	return g_nErrRtn;
     }
-
+	strKey = SPrintf("%s_%s_%s", pdata->strFileKey.c_str(), pdata->strFilePath.c_str(), pdata->strFileName.c_str());
+	m_tDataMutex.Lock();
 	DelPosSKeyID(pdata->strFileKey, POS_KEY_STR_POSITION_SP_RULE_FE_KEY);
-	{
-		String strKey;
-		strKey = SPrintf("%s_%s_%s", pdata->strFileKey.c_str(), pdata->strFilePath.c_str(), pdata->strFileName.c_str());
-//		strKey.MakeLower();
-		DelPosSKeyID(strKey, POS_KEY_STR_POSITION_SP_RULE_FE_FILE_PATH_KEY);
-	}
-
+	DelPosSKeyID(strKey, POS_KEY_STR_POSITION_SP_RULE_FE_FILE_PATH_KEY);
     DeleteItem(nID);
+	m_tDataMutex.UnLock();
     return 0;
 }
 //---------------------------------------------------------------------------
@@ -197,6 +192,23 @@ INT32					CManagePoInPtnSPRule::ApplyPoInPtnSPRule(DB_PO_IN_PTN_SP_RULE&	data)
 	}
 	return AddPoInPtnSPRule(data);
 }
+
+INT32					CManagePoInPtnSPRule::GetItemCopy(TListDBPoInPtnSPRule& tRuleList)
+{
+	TMapDBPoInPtnSPRuleItor begin, end;
+	INT32 nCount = 0;
+	m_tDataMutex.Lock();
+	begin = m_tMap.begin();	end = m_tMap.end();
+	for(begin; begin != end; begin++)
+	{
+		tRuleList.push_back(begin->second);
+	}
+	nCount = tRuleList.size();
+	m_tDataMutex.UnLock();
+	return nCount;
+}
+
+
 //---------------------------------------------------------------------------
 
 String					CManagePoInPtnSPRule::GetName(UINT32 nID)
@@ -211,11 +223,13 @@ UINT32					CManagePoInPtnSPRule::GetNextLocalID()
 {
 	UINT32 nNextID = SS_PO_IN_PTN_SP_RULE_LOCAL_START_ID;
 	TMapDBPoInPtnSPRuleItor begin, end;
+	m_tDataMutex.Lock();
 	begin = m_tMap.begin();	end = m_tMap.end();
 	for(begin; begin != end; begin++)
 	{
 		if(begin->first >= nNextID)		nNextID += 1;
 	}
+	m_tDataMutex.UnLock();
 	return nNextID;
 }
 //---------------------------------------------------------------------------
@@ -223,14 +237,15 @@ UINT32					CManagePoInPtnSPRule::GetNextLocalID()
 
 INT32					CManagePoInPtnSPRule::SetPkt(MemToken& SendToken)
 {
-    SendToken.TokenAdd_32(m_tMap.size());
-
 	TMapDBPoInPtnSPRuleItor begin, end;
+	m_tDataMutex.Lock();
+	SendToken.TokenAdd_32(m_tMap.size());
     begin = m_tMap.begin();	end = m_tMap.end();
     for(begin; begin != end; begin++)
     {
     	SetPkt(&(begin->second), SendToken);
     }
+	m_tDataMutex.UnLock();
     return 0;
 }
 //---------------------------------------------------------------------------

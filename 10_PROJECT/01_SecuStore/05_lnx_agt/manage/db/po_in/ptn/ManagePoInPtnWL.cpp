@@ -310,4 +310,14 @@ INVALID_PKT:
 //---------------------------------------------------------------------------
 
 
+UINT32					CManagePoInPtnWL::GetUsedMode(UINT32 nID)
+{
+	PDB_PO_IN_PTN_WL pdata = NULL;
 
+	if(nID)		pdata = FindItem(nID);
+	else		pdata = FirstItem();
+
+	if(!pdata)	return STATUS_USED_MODE_OFF;
+
+	return pdata->tDPH.nUsedMode;
+}

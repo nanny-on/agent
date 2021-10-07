@@ -54,7 +54,7 @@ public:
 	INT32					SetPktHost(UINT32 nID, MemToken& SendToken);
 	INT32					SetPktHost(PDB_PO_IN_PTN_OP pdpfpo, MemToken& SendToken);
 	INT32					GetPktHost(MemToken& RecvToken, DB_PO_IN_PTN_OP& dpfpo);
-
+	UINT32					GetUsedMode(UINT32 nID = 0);
 
 public:
 	CManagePoInPtnOp();

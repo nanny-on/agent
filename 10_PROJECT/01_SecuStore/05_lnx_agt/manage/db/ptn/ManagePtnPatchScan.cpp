@@ -65,7 +65,7 @@ INT32					CManagePtnPatchScan::AddPtnPatchScan(DB_PTN_PATCH_SCAN&	data)
     }
 
 	AddItem(data.nID, data);    
-	AddSKeyID(data.strFileHash, data.nID);	
+	AddSKeyID(data.strFileHash, data.nID);
     return 0;
 }
 //---------------------------------------------------------------------------

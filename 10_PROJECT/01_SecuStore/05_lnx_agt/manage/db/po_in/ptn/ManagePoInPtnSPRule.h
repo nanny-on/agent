@@ -27,7 +27,7 @@ class CManagePoInPtnSPRule : public CManagePoBase<DB_PO_IN_PTN_SP_RULE>
 {
 public:
 	INT32					LoadDBMS();
-
+	CMutexExt				m_tDataMutex;
 public:
 	INT32					InitHash();
 	String					GetHash();
@@ -37,10 +37,10 @@ public:
     INT32					EditPoInPtnSPRule(DB_PO_IN_PTN_SP_RULE&	data);
 	INT32					DelPoInPtnSPRule(UINT32 nID);
 	INT32					ApplyPoInPtnSPRule(DB_PO_IN_PTN_SP_RULE&	data);
-
 public:
 	String					GetName(UINT32 nID);    
 	UINT32					GetNextLocalID();
+	INT32					GetItemCopy(TListDBPoInPtnSPRule& tRuleList);
 
 public:
 	INT32					SetPkt(MemToken& SendToken);

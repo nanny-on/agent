@@ -43,6 +43,7 @@ CManagePoHostRun::~CManagePoHostRun()
 
 INT32		CManagePoHostRun::LoadDBMS()
 {
+	DB_PO_HOST_RUN	dphr;
 	TListDBPoHostRun tDBPoHostRunList;
     TListDBPoHostRunItor begin, end;
 	if(SetER(t_DBMgrPoHostRun->LoadExecute(&tDBPoHostRunList)))
@@ -288,14 +289,13 @@ INT32					CManagePoHostRun::GetPkt(MemToken& RecvToken, DB_PO_HOST_RUN& dphr)
 	if (!RecvToken.TokenDel_32(dphr.nLogReset))			goto	INVALID_PKT;
 
 
-	// linux
+	// linux --> 과제용 버전
 	if (!RecvToken.TokenDel_32(dphr.nLnxRunOption))		goto	INVALID_PKT;
 	if (!RecvToken.TokenDel_32(dphr.nLnxRmLogDay))		goto	INVALID_PKT;
 	if (!RecvToken.TokenDel_32(dphr.nLnxLgnConPeriod))		goto	INVALID_PKT;
 	if (!RecvToken.TokenDel_32(dphr.nLnxBootChkType))		goto	INVALID_PKT;
 	if (!RecvToken.TokenDel_32(dphr.nLnxOncePktNum))		goto	INVALID_PKT;
 	if (!RecvToken.TokenDel_32(dphr.nLnxConnManage))		goto	INVALID_PKT;
-
 
 	RecvToken.TokenSkip_Block();
 	return 0;

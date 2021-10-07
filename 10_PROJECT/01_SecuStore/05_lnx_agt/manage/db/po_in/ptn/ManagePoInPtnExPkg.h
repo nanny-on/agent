@@ -40,6 +40,7 @@ public:
 public:
 	INT32					ClearItemByPolicyID(UINT32 nPolicyID);
 	INT32					ClearPkgUnitByPolicyID(UINT32 nPolicyID);
+	INT32					GetUnitIDListByChkOrder(TListID& tIDList);
 
 public:
 	String					GetName(UINT32 nID);    

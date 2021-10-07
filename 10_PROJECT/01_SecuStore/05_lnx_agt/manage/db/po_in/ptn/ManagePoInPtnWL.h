@@ -50,6 +50,7 @@ public:
 	INT32					SetPktHost(UINT32 nID, MemToken& SendToken);
 	INT32					SetPkt(PDB_PO_IN_PTN_WL pdata, MemToken& SendToken);
 	INT32					GetPkt(MemToken& RecvToken, DB_PO_IN_PTN_WL& data);
+	UINT32					GetUsedMode(UINT32 nID = 0); 
 
 public:
 	CManagePoInPtnWL();

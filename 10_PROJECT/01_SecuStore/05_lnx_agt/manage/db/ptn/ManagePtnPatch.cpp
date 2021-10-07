@@ -179,10 +179,17 @@ String					CManagePtnPatch::GetName(UINT32 nID)
 
 INT32			CManagePtnPatch::SetSystemInfo()
 {
-	CSystemInfo tSysInfo;
+//	CSystemInfo tSysInfo;
+	UINT64 nSystemID = 0;
+	UINT64 nProcArch = 0;
+	if(t_SystemInfo != NULL)
+	{
+		nSystemID = t_SystemInfo->GetSystemID();
+		nProcArch = t_SystemInfo->GetSysProcArchitecture();
+	}
 	
-	m_strOsName = GetOsShortName(tSysInfo.GetSystemID());
-	m_nProcArch = tSysInfo.GetSysProcArchitecture();
+	m_strOsName = GetOsShortName(nSystemID);
+	m_nProcArch = nProcArch;
 
 	return 0;
 }

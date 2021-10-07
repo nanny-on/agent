@@ -157,7 +157,13 @@ INT32					CManagePoInPtnExPkg::ClearItemByPolicyID(UINT32 nPolicyID)
 	for(begin; begin != end; begin++)
 	{
 		PDB_PO_IN_PTN_EX_PKG pdatap = FindItem(*begin);
-		if(pdatap->tDPH.nPolicyID != nPolicyID)	continue;
+		if(pdatap->tDPH.nPolicyID != nPolicyID)
+			continue;
+
+		if(IsMultiUsedUnit(nPolicyID, pdatap->tDPH.nUnitID) == 0)
+		{
+			t_ManagePoInPtnExUnit->DelPoInPtnExUnit(pdatap->tDPH.nUnitID);
+		}
 
 		DelPoInPtnExPkg(*begin);
 	}
@@ -186,6 +192,40 @@ INT32					CManagePoInPtnExPkg::ClearPkgUnitByPolicyID(UINT32 nPolicyID)
 	}
 	return 0;
 }
+
+INT32					CManagePoInPtnExPkg::GetUnitIDListByChkOrder(TListID& tIDList)
+{
+	TMapIDList tLMapIDList;
+
+	{
+		TMapDBPoInPtnExPkgItor begin, end;
+		begin = m_tMap.begin();	end = m_tMap.end();
+		for(begin; begin != end; begin++)
+		{
+			TMapIDListItor find = tLMapIDList.find(begin->second.nChkOrder);
+			if(find == tLMapIDList.end())
+			{
+				TListID tTIDList;
+				tLMapIDList[begin->second.nChkOrder] = tTIDList;
+				find = tLMapIDList.find(begin->second.nChkOrder);
+			}
+
+			find->second.push_back(begin->second.tDPH.nUnitID);
+		}
+	}
+
+	{
+		TMapIDListItor begin, end;
+		begin = tLMapIDList.begin();	end = tLMapIDList.end();
+		for(begin; begin != end; begin++)
+		{
+			AppandListToList(begin->second, tIDList);	
+		}
+	}
+	return tIDList.size();
+}
+
+
 //---------------------------------------------------------------------------
 
 String					CManagePoInPtnExPkg::GetName(UINT32 nID)
