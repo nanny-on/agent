@@ -104,7 +104,7 @@ int CThreadPoNcPtnScan::Run()
 	// TODO: Add your specialized code here and/or call the base class
 	m_nRunFlag = 1;
 
-	WriteLogN("start %s thread : [%d]", m_strThreadName, m_nRunFlag);
+	WriteLogN("start %s thread : [%d]", m_strThreadName.c_str(), m_nRunFlag);
 
 	while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue())
 	{
@@ -116,7 +116,7 @@ int CThreadPoNcPtnScan::Run()
 			{
 				if(StartScan())
 				{
-					WriteLogE("init environment fail : [%s][oid:%u]", m_strThreadName, m_nWorkID);
+					WriteLogE("init environment fail : [%s][oid:%u]", m_strThreadName.c_str(), m_nWorkID);
 					break;
 				}
 
@@ -128,7 +128,7 @@ int CThreadPoNcPtnScan::Run()
 
 			StopScan();
 			DelWork(m_nWorkID);
-			WriteLogN("stop scan : [%s][oid:%u]", m_strThreadName, m_nWorkID);
+			WriteLogN("stop scan : [%s][oid:%u]", m_strThreadName.c_str(), m_nWorkID);
 		}
 */
 		Sleep(10);
@@ -188,7 +188,7 @@ INT32		CThreadPoNcPtnScan::StartScan()
 		PDB_PO_NC_PTN_OP_UNIT pdata = GetCurWork();
 		if(!pdata)		return -18;
 		
-		WriteLogN("[%s] start scan path : [%s][%s]:[%d]", m_strThreadName, pdata->tDPH.strName, pdata->strScanPath, pdata->nFileGatherType);
+		WriteLogN("[%s] start scan path : [%s][%s]:[%d]", m_strThreadName.c_str(), pdata->tDPH.strName, pdata->strScanPath, pdata->nFileGatherType);
 
 		{
 			CFileUtil tFileUtil;
@@ -201,7 +201,7 @@ INT32		CThreadPoNcPtnScan::StartScan()
 				strPath = tFileUtil.GetEnvPathToLocalPathSingle(strPath);
 
 				m_tFFDLLUtil.ASIFF_AddSearchDirPath(m_nWorkID, strPath);
-				WriteLogN("[%s] find file path : [%s]", m_strThreadName, strPath);
+				WriteLogN("[%s] find file path : [%s]", m_strThreadName.c_str(), strPath);
 			}
 		}
 		m_tFFDLLUtil.ASIFF_SearchDirFileThread(m_nWorkID);
@@ -218,7 +218,7 @@ INT32		CThreadPoNcPtnScan::StartScan()
 					m_tFFDLLUtil.ASIFF_ClearExceptPath(m_nWorkID);
 					m_tFFDLLUtil.ASIFF_ClearSearchDirPath(m_nWorkID);
 					m_tFFDLLUtil.ASIFF_ClearFileFindOption(m_nWorkID);
-					WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName, m_nWorkID);
+					WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName.c_str(), m_nWorkID);
 					nSearchEnd = 1;
 					break;
 				}
@@ -255,7 +255,7 @@ INT32		CThreadPoNcPtnScan::ChkScanFile()
 
 	if(tAFFR.nContinue == 0 && tAFFR.nMoreFileItem == 0)  
 	{
-		WriteLogN("[%s] find file work end : [%d][%d:%d]", m_strThreadName, m_nWorkID, tAFFR.nFileWorkedNum, tAFFR.nFileTotalNum);
+		WriteLogN("[%s] find file work end : [%d][%d:%d]", m_strThreadName.c_str(), m_nWorkID, tAFFR.nFileWorkedNum, tAFFR.nFileTotalNum);
 		return -1;
 	}
 
@@ -282,7 +282,7 @@ INT32		CThreadPoNcPtnScan::ChkScanFile()
 					m_tWEngWLExMap[strFeKey] = tAWWE;
 					if((m_tWEngWLExMap.size() % 1000) == 0)
 					{
-						WriteLogN("[%s] add nc ptn op local item : [%d]", m_strThreadName, m_tWEngWLExMap.size());
+						WriteLogN("[%s] add nc ptn op local item : [%d]", m_strThreadName.c_str(), m_tWEngWLExMap.size());
 					}	
 				}	
 				else
@@ -297,7 +297,7 @@ INT32		CThreadPoNcPtnScan::ChkScanFile()
 					m_tSiteFileAliasList.push_back(tDSFA);
 					if((m_tSiteFileAliasList.size() % 1000) == 0)
 					{
-						WriteLogN("[%s] add in ptn op local item alias : [%d]", m_strThreadName, m_tSiteFileAliasList.size());
+						WriteLogN("[%s] add in ptn op local item alias : [%d]", m_strThreadName.c_str(), m_tSiteFileAliasList.size());
 					}
 				}						
 			}

@@ -111,7 +111,7 @@ int CThreadPoNcPtnLo::Run()
 	// TODO: Add your specialized code here and/or call the base class
 	m_nRunFlag = 1;
 
-	WriteLogN("start %s thread : [%d]", m_strThreadName, m_nRunFlag);
+	WriteLogN("start %s thread : [%d]", m_strThreadName.c_str(), m_nRunFlag);
 
 	while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue())
 	{
@@ -243,7 +243,7 @@ INT32		CThreadPoNcPtnLo::InitEnv()
 			{
 				String strPath = Token.NextToken();
 				m_tFFDLLUtil.ASIFF_AddSearchDirPath(m_nWorkOrderID, strPath);
-				WriteLogN("[%s] find file path : [%s]", m_strThreadName, strPath);
+				WriteLogN("[%s] find file path : [%s]", m_strThreadName.c_str(), strPath);
 			}
 		}
 		m_tFFDLLUtil.ASIFF_SearchDirFileThread(m_nWorkOrderID);
@@ -260,7 +260,7 @@ INT32		CThreadPoNcPtnLo::InitEnv()
 					m_tFFDLLUtil.ASIFF_ClearExceptPath(m_nWorkOrderID);
 					m_tFFDLLUtil.ASIFF_ClearSearchDirPath(m_nWorkOrderID);
 					m_tFFDLLUtil.ASIFF_ClearFileFindOption(m_nWorkOrderID);
-					WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName, m_nWorkOrderID);
+					WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName.c_str(), m_nWorkOrderID);
 					nSearchEnd = 1;
 					break;
 				}
@@ -287,7 +287,7 @@ INT32		CThreadPoNcPtnLo::InitEnv()
 				String strFeKey = BinToHexLen((PBYTE)(tAWWE.acWhiteHash), SHA512_BLOCK_SIZE);
 				if(m_tWEngWLExMap.find(strFeKey) == m_tWEngWLExMap.end())
 				{
-					WriteLogN("[%s] add exe ptn info : [%s]", m_strThreadName, tAWWE.acFilePath);
+					WriteLogN("[%s] add exe ptn info : [%s]", m_strThreadName.c_str(), tAWWE.acFilePath);
 					m_tWEngWLExMap[strFeKey] = tAWWE;
 				}
 			}
@@ -322,7 +322,7 @@ INT32		CThreadPoNcPtnLo::ChkScanFile()
 
 	if(tAFFR.nContinue == 0 && tAFFR.nMoreFileItem == 0)  
 	{
-		WriteLogN("[%s] find file work end : [%d][%d:%d]", m_strThreadName, m_nWorkOrderID, tAFFR.nFileWorkedNum, tAFFR.nFileTotalNum);
+		WriteLogN("[%s] find file work end : [%d][%d:%d]", m_strThreadName.c_str(), m_nWorkOrderID, tAFFR.nFileWorkedNum, tAFFR.nFileTotalNum);
 		return -1;
 	}
 
@@ -349,7 +349,7 @@ INT32		CThreadPoNcPtnLo::ChkScanFile()
 					m_tWEngWLExMap[strFeKey] = tAWWE;
 					if((m_tWEngWLExMap.size() % 1000) == 0)
 					{
-						WriteLogN("[%s] add nc ptn op local item : [%d]", m_strThreadName, m_tWEngWLExMap.size());
+						WriteLogN("[%s] add nc ptn op local item : [%d]", m_strThreadName.c_str(), m_tWEngWLExMap.size());
 					}	
 				}							
 			}
@@ -376,7 +376,7 @@ INT32		CThreadPoNcPtnLo::SavePtnFile()
 
 		if(pCurPolicy->tDPH.nSeqNo != m_tCurPolicy.tDPH.nSeqNo)
 		{
-			WriteLogE("[%s] invalid sequence id po_nc_ptn_lo : [%d][%d]", m_strThreadName, pCurPolicy->tDPH.nSeqNo, m_tCurPolicy.tDPH.nSeqNo);
+			WriteLogE("[%s] invalid sequence id po_nc_ptn_lo : [%d][%d]", m_strThreadName.c_str(), pCurPolicy->tDPH.nSeqNo, m_tCurPolicy.tDPH.nSeqNo);
 			return -2;
 		}
 	}

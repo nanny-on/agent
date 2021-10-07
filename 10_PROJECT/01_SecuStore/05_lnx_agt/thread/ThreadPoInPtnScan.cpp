@@ -122,7 +122,7 @@ int CThreadPoInPtnScan::Run()
 					break;
 				}
 
-				if(m_tWEngWLExMap.size())
+				if(m_tWEngWLExMap.size() || m_tSiteFileAliasList.size())
 				{
 					ProcessScanResult();
 				}
@@ -183,48 +183,49 @@ INT32		CThreadPoInPtnScan::StartScan()
 
 	m_tWEngWLExMap.clear();
 	m_tSiteFileAliasList.clear();
+
+	PDB_PO_IN_PTN_OP_UNIT pdata = GetCurWork();
+	if(!pdata)
+		return -18;
+
+	WriteLogN("[%s] start scan path : [%s][%s]:[%d]", m_strThreadName.c_str(), pdata->tDPH.strName.c_str(), pdata->strScanPath.c_str(), pdata->nFileGatherType);
+
+	CFileUtil tFileUtil;
+	CHAR chTok = GetToken(pdata->strScanPath, ';', ',');
+	CTokenString Token(pdata->strScanPath.c_str(), pdata->strScanPath.length(), chTok);
+	while(Token.IsNextToken())
 	{
-		PDB_PO_IN_PTN_OP_UNIT pdata = GetCurWork();
-		if(!pdata)		return -18;
+		String strPath = Token.NextToken();
 
-		WriteLogN("[%s] start scan path : [%s][%s]:[%d]", m_strThreadName.c_str(), pdata->tDPH.strName.c_str(), pdata->strScanPath.c_str(), pdata->nFileGatherType);
+		strPath = tFileUtil.GetEnvPathToLocalPathSingle(strPath);
 
-		{
-			CFileUtil tFileUtil;
-			CHAR chTok = GetToken(pdata->strScanPath, ';', ',');
-			CTokenString Token(pdata->strScanPath.c_str(), pdata->strScanPath.length(), chTok);
-			while(Token.IsNextToken())
-			{
-				String strPath = Token.NextToken();
-
-				strPath = tFileUtil.GetEnvPathToLocalPathSingle(strPath);
-
-				m_tFFDLLUtil.ASIFF_AddSearchDirPath(m_nWorkID, strPath.c_str());
-				WriteLogN("[%s] find file path : [%s]", m_strThreadName.c_str(), strPath.c_str());
-			}
-		}
-		m_tFFDLLUtil.ASIFF_SearchDirFileThread(m_nWorkID);
-		UINT32 nSearchEnd = 0;
-
-		while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue() && !nSearchEnd)
-		{
-			switch(ChkScanFile())
-			{
-			case -1:
-				{
-					m_tFFDLLUtil.ASIFF_ClearFileMask(m_nWorkID);
-					m_tFFDLLUtil.ASIFF_ClearFileDateTime(m_nWorkID);
-					m_tFFDLLUtil.ASIFF_ClearExceptPath(m_nWorkID);
-					m_tFFDLLUtil.ASIFF_ClearSearchDirPath(m_nWorkID);
-					m_tFFDLLUtil.ASIFF_ClearFileFindOption(m_nWorkID);
-					WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName.c_str(), m_nWorkID);
-					nSearchEnd = 1;
-					break;
-				}
-			case 1:		Sleep(1000);		break;
-			}
-		}		
+		m_tFFDLLUtil.ASIFF_AddSearchDirPath(m_nWorkID, strPath.c_str());
+		WriteLogN("[%s] find file path : [%s]", m_strThreadName.c_str(), strPath.c_str());
 	}
+
+	m_tFFDLLUtil.ASIFF_SearchDirFileThread(m_nWorkID);
+	UINT32 nSearchEnd = 0;
+
+	while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue() && !nSearchEnd)
+	{
+		switch(ChkScanFile())
+		{
+		case -1:
+			{
+				m_tFFDLLUtil.ASIFF_ClearFileMask(m_nWorkID);
+				m_tFFDLLUtil.ASIFF_ClearFileDateTime(m_nWorkID);
+				m_tFFDLLUtil.ASIFF_ClearExceptPath(m_nWorkID);
+				m_tFFDLLUtil.ASIFF_ClearSearchDirPath(m_nWorkID);
+				m_tFFDLLUtil.ASIFF_ClearFileFindOption(m_nWorkID);
+				WriteLogN("[%s] find file stop and clear operation : [%d]", m_strThreadName.c_str(), m_nWorkID);
+				nSearchEnd = 1;
+				break;
+			}
+		case 1:
+			Sleep(1000);
+			break;
+		}
+	}		
 
 	return 0;
 }
@@ -257,7 +258,10 @@ INT32		CThreadPoInPtnScan::ChkScanFile()
 		return -1;
 	}
 
-	if(!nAFFINum)	return 1; 
+	if(!nAFFINum)
+	{
+		return 1; 
+	}
 
 	UINT32 nIdx = 0;
 	while(nIdx < nAFFINum && GetContinue())
@@ -270,7 +274,6 @@ INT32		CThreadPoInPtnScan::ChkScanFile()
 			memset(&tAWWE, 0, sizeof(ASI_WENG_WL_EX));
 			if(m_tWEDLLUtil.GetWL(strObjectName.c_str(), (PVOID)&tAWWE, sizeof(tAWWE), &dwFileType) == ERROR_SUCCESS && dwFileType != AS_INVALID_FILE)
 			{
-//				String strFeKey = BinToHexLen((PBYTE)(tAWWE.acWhiteHash), SHA512_BLOCK_SIZE);
 				String strFeKey = tAWWE.acWhiteHash;
 				if(m_tWEngWLExMap.find(strFeKey) == m_tWEngWLExMap.end())
 				{
@@ -301,7 +304,7 @@ INT32		CThreadPoInPtnScan::ChkScanFile()
 		}	
 
 		nIdx += 1;
-	}	
+	}
 	return 0;
 }
 //---------------------------------------------------------------------------

@@ -57,7 +57,7 @@ int CThreadExecute::Run()
 {
 	// TODO: Add your specialized code here and/or call the base class
 	m_nRunFlag = 1;
-	WriteLogN("start %s thread : [%d]", m_strThreadName, m_nRunFlag);
+	WriteLogN("start %s thread : [%d]", m_strThreadName.c_str(), m_nRunFlag);
 /*	
 	{
 		m_tASICabDLLUtil.LoadLibraryExt();
@@ -82,13 +82,13 @@ int CThreadExecute::Run()
 					ExecuteWork(&data);
 					if(data.nCode == SS_APPLY_PATCH_FILE_TYPE_CAB)
 					{
-						//WriteLogN("[%s] check execut process result : [%d][%s]", m_strThreadName, data.nErrCode, data.strLogFile);
+						//WriteLogN("[%s] check execut process result : [%d][%s]", m_strThreadName.c_str(), data.nErrCode, data.strLogFile);
 						
 						INT32 nExeSucc = 0;
 						if(m_tSysInfo.IsLowOsVer(6, 0))		nExeSucc = m_tAPUtil.IsValidExecutePkgMgr(data.strLogFile);
 						else								nExeSucc = m_tAPUtil.IsValidExecuteDISM(data.strLogFile);
 
-						WriteLogN("[%s] check execut process result [%d] : [%d][%s]", m_strThreadName, nExeSucc, data.nErrCode, data.strLogFile);
+						WriteLogN("[%s] check execut process result [%d] : [%d][%s]", m_strThreadName.c_str(), nExeSucc, data.nErrCode, data.strLogFile);
 
 						if(!nExeSucc)
 						{
@@ -163,11 +163,11 @@ INT32		CThreadExecute::ExecuteWork(PMEM_WORK_EXECUTE pdata)
 	if(!nExeRst)
 	{		
 		pdata->nErrCode = GetLastError();
-		WriteLogE("[%s] execut process fail : [%d] -- [%d][%s][%s]", m_strThreadName, pdata->nErrCode, pdata->nExeSession, pdata->strExecute, pdata->strCommand);
+		WriteLogE("[%s] execut process fail : [%d] -- [%d][%s][%s]", m_strThreadName.c_str(), pdata->nErrCode, pdata->nExeSession, pdata->strExecute, pdata->strCommand);
 	}
 	else
 	{
-		WriteLogN("[%s] execut process succ : [%d][%s][%s]", m_strThreadName, pdata->nErrCode, pdata->strExecute, pdata->strCommand);
+		WriteLogN("[%s] execut process succ : [%d][%s][%s]", m_strThreadName.c_str(), pdata->nErrCode, pdata->strExecute, pdata->strCommand);
 		UINT32 nWaitTime = GetCurrentDateTimeInt();
 		UINT32 nCurTime = 0;
 		
@@ -180,7 +180,7 @@ INT32		CThreadExecute::ExecuteWork(PMEM_WORK_EXECUTE pdata)
 				nCurTime = GetCurrentDateTimeInt();
 				if(nCurTime - nWaitTime > 60)
 				{
-					WriteLogN("[%s] wait process .. [%d]", m_strThreadName, nProcID);
+					WriteLogN("[%s] wait process .. [%d]", m_strThreadName.c_str(), nProcID);
 					nWaitTime = nCurTime;
 				}
 			}
@@ -191,7 +191,7 @@ INT32		CThreadExecute::ExecuteWork(PMEM_WORK_EXECUTE pdata)
 		}
 		CloseHandle(mhStop);	
 
-		WriteLogN("[%s] execut process end and continue wait child : [%d][%s][%s][%s]", m_strThreadName, pdata->nErrCode, pdata->strExecute, pdata->strCommand, (pdata->nWaitChild ? "Wait" : "Skip"));
+		WriteLogN("[%s] execut process end and continue wait child : [%d][%s][%s][%s]", m_strThreadName.c_str(), pdata->nErrCode, pdata->strExecute, pdata->strCommand, (pdata->nWaitChild ? "Wait" : "Skip"));
 
 		if(pdata->nWaitChild && (nProcID = tProcUtil.GetChildProcessID(nProcID)))
 		{
@@ -203,7 +203,7 @@ INT32		CThreadExecute::ExecuteWork(PMEM_WORK_EXECUTE pdata)
 					nCurTime = GetCurrentDateTimeInt();
 					if(nCurTime - nWaitTime > 60)
 					{
-						WriteLogN("[%s] wait child process .. [%d]", m_strThreadName, nProcID);
+						WriteLogN("[%s] wait child process .. [%d]", m_strThreadName.c_str(), nProcID);
 						nWaitTime = nCurTime;
 					}
 				}
@@ -223,7 +223,7 @@ INT32		CThreadExecute::ExecuteWork(PMEM_WORK_EXECUTE pdata)
 INT32	CThreadExecute::ExecuteWorkForCab(PMEM_WORK_EXECUTE pdata)
 {
 /*
-	WriteLogN("[%s] extract work for cab start : [%s]", m_strThreadName, pdata->strFileName); 
+	WriteLogN("[%s] extract work for cab start : [%s]", m_strThreadName.c_str(), pdata->strFileName); 
 
 	CFileUtil tFileUtil;
 	CHAR szTempDir[CHAR_MAX_SIZE] = {0, };
@@ -235,7 +235,7 @@ INT32	CThreadExecute::ExecuteWorkForCab(PMEM_WORK_EXECUTE pdata)
 
 	if(m_tASICabDLLUtil.ASICAB_Extract(pdata->strFileName, pdata->strWorkPath))
 	{
-		WriteLogE("[%s] cabinet extract fail : [%s]", m_strThreadName, m_tASICabDLLUtil.GetLastError());
+		WriteLogE("[%s] cabinet extract fail : [%s]", m_strThreadName.c_str(), m_tASICabDLLUtil.GetLastError());
 		return -1;
 	}
 
@@ -251,7 +251,7 @@ INT32	CThreadExecute::ExecuteWorkForCab(PMEM_WORK_EXECUTE pdata)
 			MEM_WORK_EXECUTE data = *pdata;
 			if(m_tAPUtil.MakeExecuteWork(data, begin->strFullPath, ""))		continue;
 	
-			WriteLogN("[%s] execute cabinet inner patch : [%d][%s]", m_strThreadName, nIdx++, begin->strFullPath);
+			WriteLogN("[%s] execute cabinet inner patch : [%d][%s]", m_strThreadName.c_str(), nIdx++, begin->strFullPath);
 			ExecuteWork(&data);
 			if(data.nErrCode)
 			{

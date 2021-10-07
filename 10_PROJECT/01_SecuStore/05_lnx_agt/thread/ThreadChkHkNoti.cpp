@@ -253,9 +253,12 @@ INT32		CThreadChkHkNoti::ChkMemFileList()
 
 INT32		CThreadChkHkNoti::RunLockProcess() 
 {
-	CSystemInfo tSysInfo;
+//	CSystemInfo tSysInfo;
 	INT32 nChkTS = 1;
-	if(tSysInfo.GetSystemID() == ASI_SYSTEM_ID_7)
+	UINT64 nSystemID = 0;
+	if(t_SystemInfo != NULL)
+		nSystemID = t_SystemInfo->GetSystemID();
+	if(nSystemID == ASI_SYSTEM_ID_7)
 	{
 		nChkTS = 0;
 		CProcUtil tProcUtil;
