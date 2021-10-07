@@ -78,7 +78,7 @@ private:
 	UINT64		ConvertOnlyNumberFromStr(CString strValue);
 	CString		GetOnlyNameStr(CString strValue);
 	CString		RemoveFirstLastChar(CString strValue, CHAR szFRmChar, CHAR szLRmChar);
-	CString		RemoveLastChar(CString strValue, CHAR szLRmChar);
+//	CString		RemoveLastChar(CString strValue, CHAR szLRmChar);
 	CString		ReverseString(LPCTSTR lpInput, INT32 nLen);
 
 public:
