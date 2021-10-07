@@ -27,6 +27,7 @@
 
 #include "com_define_manage_base.h"
 
+
 //---------------------------------------------------------------------------
 template <class _T>
 
@@ -78,6 +79,13 @@ public:
 	virtual UINT32		GetSKeyID_KeyList(TListCStr& tKeyList);
 	virtual	UINT32		ClearSKeyID();
 	virtual	UINT32		ConvertSKeyID(TListCStr& tStrKeyList, TListID& tIDList);
+
+public:
+	virtual	VOID		AddWPathStr(CString strPath, CString strHash);
+	virtual	VOID		DelWPathStr(CString strPath);
+	virtual	UINT32		FindWPathStr(CString strPath, CString &strHash);
+	virtual	VOID		ClearWPathStr();
+	virtual	UINT32		GetWPathStr_FileHashList(TListFileHashInfo& tFileHashList);
 
 public:
 	virtual	UINT32		AddKeyIDList(UINT32 nKey, UINT32 nID);
@@ -252,10 +260,10 @@ protected :
 	map <UINT32, _T>		m_tMap;
 	TMapID					m_tKeyMap;
 	TMapCStrID				m_tSKeyMap;
+	TMapCStr				m_tWPathStrMap;
 
 	TMapIDList				m_tKeyListMap;
-	TMapCStrList			m_tSKeyListMap;
-	
+	TMapCStrList			m_tSKeyListMap;	
 	
 	TMapIDMap				m_tKeyIDMap;
 	TMapIDMap				m_tKeyTypeMap;
@@ -857,6 +865,68 @@ TEMPLATE	UINT32		CFManageBase<_T>::ConvertSKeyID(TListCStr& tStrKeyList, TListID
 	pthread_mutex_unlock (&m_mutex);
 	return 0;
 }
+
+
+TEMPLATE	VOID		CFManageBase<_T>::AddWPathStr(CString strPath, CString strHash)
+{
+	pthread_mutex_lock (&m_mutex);
+	m_tWPathStrMap[strPath] = strHash;
+	pthread_mutex_unlock (&m_mutex);
+}
+
+TEMPLATE	VOID		CFManageBase<_T>::DelWPathStr(CString strPath)
+{
+	pthread_mutex_lock (&m_mutex);
+	m_tWPathStrMap.erase(strPath);
+	pthread_mutex_unlock (&m_mutex);
+}
+
+TEMPLATE	UINT32		CFManageBase<_T>::FindWPathStr(CString strPath, CString &strHash)
+{
+	UINT32 nRtn = 0;
+
+	pthread_mutex_lock (&m_mutex);
+	TMapCStrItor find = m_tWPathStrMap.find(strPath);
+	if(find != m_tWPathStrMap.end())
+	{
+		strHash = find->second;
+		nRtn = 1;
+	}
+	pthread_mutex_unlock (&m_mutex);
+	return nRtn;
+}
+
+TEMPLATE	VOID		CFManageBase<_T>::ClearWPathStr()
+{
+	pthread_mutex_lock (&m_mutex);
+	m_tWPathStrMap.clear();
+	pthread_mutex_unlock (&m_mutex);
+}
+
+TEMPLATE	UINT32		CFManageBase<_T>::GetWPathStr_FileHashList(TListFileHashInfo& tFileHashList)
+{
+	UINT32 nCount = 0;
+	ASI_FILE_HASH stFileHash;
+	TMapCStrItor begin, end;
+	pthread_mutex_lock (&m_mutex);
+
+	begin = m_tWPathStrMap.begin();	end = m_tWPathStrMap.end();
+	for(begin; begin != end; begin++)
+	{
+		memset(&stFileHash, 0, sizeof(ASI_FILE_HASH));
+		strncpy(stFileHash.acFullPath, (char *)(LPCSTR)begin->first, MAX_PATH-1);
+		stFileHash.acFullPath[MAX_PATH-1] = 0;
+		strncpy(stFileHash.acWhiteHash, (char *)(LPCSTR)begin->second, SHA512_BLOCK_SIZE);
+		stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		tFileHashList.push_back(stFileHash);
+	}
+
+	nCount = tFileHashList.size();
+	pthread_mutex_unlock (&m_mutex);
+
+	return nCount;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -3639,4 +3709,3 @@ TEMPLATE _T*			CFManageBase<_T>::GetPData()
 //-----------------------------------------------------------------------------
 
 #endif /*FILE_MANAGE_BASE_H__*/
-
