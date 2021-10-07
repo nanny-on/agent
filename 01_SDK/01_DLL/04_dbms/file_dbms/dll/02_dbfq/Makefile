@@ -36,10 +36,8 @@ clean:
 	make dll_clean
 
 dll_all: $(OBJ)
-	$(CC) -shared $(CFLAGS) -o asi_dbfq.so $(OBJ) ./util/ASIDBFQMember.o ./util/ASIDBFQUtil.o ./util/QueryUtil.o ./extension/TokenQuery.o ../01_dbf_lib/*.o ../../../../../../01_SDK/01_BASE/lv_00/src/MutexExt.o ../../../../../../01_SDK/01_BASE/lv_01_global/src/LogUtil.o ../../../../../../01_SDK/01_BASE/lv_02_util/src/TokenCString.o ../../../../../../01_SDK/05_LIB/as_lib/src/libascomm.a -luuid -ldl
+	$(CC) -shared $(CFLAGS) -o asi_dbfq.so $(OBJ) ./util/ASIDBFQMember.o ./util/ASIDBFQUtil.o ./util/QueryUtil.o ./extension/TokenQuery.o ../01_dbf_lib/*.o ../../../../../../01_SDK/01_BASE/lv_00/src/MutexExt.o ../../../../../../01_SDK/01_BASE/lv_01_global/src/LogUtil.o ../../../../../../01_SDK/01_BASE/lv_02_util/src/TokenCString.o ../../../../../../01_SDK/01_GLB_W32/src/LnxString.o ../../../../../../01_SDK/05_LIB/as_lib/src/libascomm.a -luuid -ldl
 
 dll_clean:
 	rm -f $(OBJ)
 	rm -f asi_dbfq.so
-	
-
