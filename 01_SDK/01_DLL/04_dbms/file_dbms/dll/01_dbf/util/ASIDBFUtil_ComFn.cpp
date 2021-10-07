@@ -366,4 +366,3 @@ INT32		CASIDBFUtil::SetAutoIncrementID(PDBF_TABLE_SEARCH pdts, PDBF_TABLE_ITEM_H
 	}
 	return 0;
 }
-//---------------------------------------------------------------------
