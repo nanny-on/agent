@@ -89,7 +89,7 @@ INT32		CASIDBFUtil::WriteLogOpTickCnt(CString strTName)
 	UINT32 nLTickCnt = GetTickCount();
 	UINT32 nSTickCnt = 0;
 	{
-		nSTickCnt = HIUINT32(m_tChkOpTickCntMap[1]);
+		nSTickCnt = HIUINT64(m_tChkOpTickCntMap[1]);
 		if(m_nChkOpTickCnt > (nLTickCnt - nSTickCnt))	return 0;		
 	}
 	
@@ -101,8 +101,8 @@ INT32		CASIDBFUtil::WriteLogOpTickCnt(CString strTName)
 		for(nIdx; nIdx < m_nChkOpTickCntIdx; nIdx++)
 		{
 			strTickTemp.Empty();
-			nKey = LOUINT32(m_tChkOpTickCntMap[nIdx]);
-			nValue = HIUINT32(m_tChkOpTickCntMap[nIdx]);
+			nKey = LOUINT64(m_tChkOpTickCntMap[nIdx]);
+			nValue = HIUINT64(m_tChkOpTickCntMap[nIdx]);
 			
 			switch(nKey)
 			{
@@ -127,7 +127,7 @@ INT32		CASIDBFUtil::WriteLogOpTickCnt(CString strTName)
 
 			strTickLog += strTickTemp;
 		}
-		WriteLogN("dbf opt info [%s] : %s", strTName, strTickLog);
+		WriteLogN("dbf opt info [%s] : %s", (LPCSTR)strTName, (LPCSTR)strTickLog);
 	}
 	
 	return 0;	
@@ -167,7 +167,7 @@ UINT32		CASIDBFUtil::GetBuffLength(TMapID64& tHLenMap, INT32 nIdx)
 	TMapID64Itor find = tHLenMap.find(nIdx);
 	if(find == tHLenMap.end())	return 0;
 
-	return LOUINT32(find->second);
+	return LOUINT64(find->second);
 }
 //---------------------------------------------------------------------------
 
@@ -225,7 +225,7 @@ void		CASIDBFUtil::CopyHLenMapToBuff(TMapID64& tHLenMap, PBYTE lpHLenBuff, PDBF_
 
 		{
 			TMapID64Itor find = tHLenMap.find(nItemIdx);
-			if(find != tHLenMap.end())	nLen = LOUINT32(find->second);
+			if(find != tHLenMap.end())	nLen = LOUINT64(find->second);
 		}
 
 		if(tDTC.nMemberType == ASI_DBF_MEMBER_TYPE_LSTRING)
@@ -367,7 +367,3 @@ INT32		CASIDBFUtil::SetAutoIncrementID(PDBF_TABLE_SEARCH pdts, PDBF_TABLE_ITEM_H
 	return 0;
 }
 //---------------------------------------------------------------------
-
-
-
-
