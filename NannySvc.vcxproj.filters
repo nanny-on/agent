@@ -1543,6 +1543,26 @@
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\dbms_manage\FDBMgrBase.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\ComExternObject.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInPtnFile.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInSpReq.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\reqwhite\reqwhite.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_dlg.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_mon.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread_base.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_timer.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread_event.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_dlg.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_mon.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_base.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_timer.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFile.cpp" />
+    <ClCompile Include="01_SDK\01_GLB_W32\src\LnxString.cpp" />
+    <ClCompile Include="01_SDK\01_GLB_W32\src\LnxStringW.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01_SDK\00_SDK_01\inc\asi_lnx_base_hdr.h" />
@@ -3654,6 +3674,26 @@
     <ClInclude Include="01_SDK\00_SDK_01\inc\com_struct_dbf_header.h" />
     <ClInclude Include="01_SDK\00_SDK_01\inc\com_define_dbf_mecro.h" />
     <ClInclude Include="01_SDK\00_SDK_01\inc\com_define_dbf_auth.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInSpReq.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\com_header\com_define_pipe.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_dlg.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_mon.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread_base.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_timer.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_thread_event.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_dlg.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_mon.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_base.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_timer.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFile.h" />
+    <ClInclude Include="01_SDK\01_GLB_W32\src\LnxString.h" />
+    <ClInclude Include="01_SDK\01_GLB_W32\src\LnxStringW.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="01_SDK\01_DLL\03_system\white_pattern\dll\testsrc\Makefile" />
@@ -3671,5 +3711,7 @@
     <None Include="01_SDK\01_DLL\04_dbms\file_dbms\dll\01_dbf\enc_util\Makefile" />
     <None Include="01_SDK\01_DLL\04_dbms\file_dbms\dll\01_dbf\enc_util\seed\Makefile" />
     <None Include="01_SDK\01_DLL\04_dbms\file_dbms\dll\01_dbf\enc_util\seed\seedx.tab" />
+    <None Include="10_PROJECT\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\Makefile" />
   </ItemGroup>
 </Project>
