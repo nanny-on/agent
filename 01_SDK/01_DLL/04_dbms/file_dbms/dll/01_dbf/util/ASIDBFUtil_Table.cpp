@@ -100,6 +100,8 @@ INT32		CASIDBFUtil::MakeDBF_TablePriFPList(PDBF_TABLE_SEARCH pDTS)
 {
 	INT32 nPriKeyIdx = -1;
 	UINT32 nColIdx = 0;
+	if(pDTS == NULL)
+		return -1;
 	while(pDTS->tDT.tHInfo.nColNumber > nColIdx)
 	{
 		PDBF_TABLE_COLUMN pdtc = &(pDTS->tDT.tColInfo[nColIdx]);
@@ -123,17 +125,30 @@ INT32		CASIDBFUtil::MakeDBF_TablePriFPList(PDBF_TABLE_SEARCH pDTS)
 			PDBF_ITEM_RTN pdir = GetField(nPriKeyIdx);
 			if(!pdir)	continue;
 
-			if(!pdir->pRtnUINT16 && !pdir->pRtnUINT32 && !pdir->pRtnUINT64 &&
-				!pdir->szRtnString)		continue;
-
 			switch(pdir->nRtnType)
 			{
-				case ASI_DBF_MEMBER_TYPE_UINT16:	pDTS->_apply_fp(*(pdir->pRtnUINT16), GetFieldFP());		break;
-				case ASI_DBF_MEMBER_TYPE_UINT32:	pDTS->_apply_fp(*(pdir->pRtnUINT32), GetFieldFP());		break;
-				case ASI_DBF_MEMBER_TYPE_UINT64:	pDTS->_apply_fp(*(pdir->pRtnUINT64), GetFieldFP());		break;
-				case ASI_DBF_MEMBER_TYPE_STRING:	pDTS->_apply_fp(CString(pdir->szRtnString, pdir->nRtnLen), GetFieldFP());		break;				
-				case ASI_DBF_MEMBER_TYPE_LSTRING:	pDTS->_apply_fp(CString(pdir->szRtnString, pdir->nRtnLen), GetFieldFP());		break;				
-				case ASI_DBF_MEMBER_TYPE_OBJECT:	break;
+				case ASI_DBF_MEMBER_TYPE_UINT16:
+					if(pdir->pRtnUINT16 != NULL)
+						pDTS->_apply_fp(*(pdir->pRtnUINT16), GetFieldFP());
+					break;
+				case ASI_DBF_MEMBER_TYPE_UINT32:
+					if(pdir->pRtnUINT32 != NULL)
+						pDTS->_apply_fp(*(pdir->pRtnUINT32), GetFieldFP());
+					break;
+				case ASI_DBF_MEMBER_TYPE_UINT64:
+					if(pdir->pRtnUINT64 != NULL)
+						pDTS->_apply_fp(*(pdir->pRtnUINT64), GetFieldFP());
+					break;
+				case ASI_DBF_MEMBER_TYPE_STRING:
+					if(pdir->szRtnString != NULL)
+						pDTS->_apply_fp(CString(pdir->szRtnString, pdir->nRtnLen), GetFieldFP());
+					break;
+				case ASI_DBF_MEMBER_TYPE_LSTRING:
+					if(pdir->szRtnString != NULL)
+						pDTS->_apply_fp(CString(pdir->szRtnString, pdir->nRtnLen), GetFieldFP());
+					break;
+				case ASI_DBF_MEMBER_TYPE_OBJECT:
+					break;
 			}
 		}
 		FreeCommonBuff(&(pMember->m_pCurItemBuff));
@@ -1234,25 +1249,33 @@ INT32		CASIDBFUtil::ModifyDBF_TableInitAutoIncrement(CString strTName, UINT64 nI
 		while(NextDBF_Item(strTName) == 0) 
 		{
 			CASIDBFMember* pMember = GetMember();
+			if(pMember == NULL)
+				continue;
 
 			nCurValue = 0;
 			GetField(nAutoColIdx);
 			
-			if(pMember->m_tCurDBFIR.pRtnUINT16 == NULL && pMember->m_tCurDBFIR.pRtnUINT32 == NULL &&
-				pMember->m_tCurDBFIR.pRtnUINT64 == NULL)	continue;
-
 			switch(pMember->m_tCurDBFIR.nRtnType)
 			{
-				case ASI_DBF_MEMBER_TYPE_UINT16:		nCurValue = UINT64(*(pMember->m_tCurDBFIR.pRtnUINT16));		break;
-				case ASI_DBF_MEMBER_TYPE_UINT32:		nCurValue = UINT64(*(pMember->m_tCurDBFIR.pRtnUINT32));		break;
-				case ASI_DBF_MEMBER_TYPE_UINT64:		nCurValue = *(pMember->m_tCurDBFIR.pRtnUINT64);				break;
+				case ASI_DBF_MEMBER_TYPE_UINT16:
+					if(pMember->m_tCurDBFIR.pRtnUINT16 != NULL)
+						nCurValue = UINT64(*(pMember->m_tCurDBFIR.pRtnUINT16));
+					break;
+				case ASI_DBF_MEMBER_TYPE_UINT32:
+					if(pMember->m_tCurDBFIR.pRtnUINT32 != NULL)
+						nCurValue = UINT64(*(pMember->m_tCurDBFIR.pRtnUINT32));
+					break;
+				case ASI_DBF_MEMBER_TYPE_UINT64:
+					if(pMember->m_tCurDBFIR.pRtnUINT64 != NULL)
+						nCurValue = *(pMember->m_tCurDBFIR.pRtnUINT64);
+					break;
 			}
 			if(nSelInitValue < nCurValue)	nSelInitValue = nCurValue;
 		}
 	}
 
 	nSelInitValue += 1;
-	WriteLogN("init auto increment table succ : select auto_inc [%s][%I64u]", strTName, nSelInitValue);
+	WriteLogN("init auto increment table succ : select auto_inc [%s][%I64u]", (char *)(LPCTSTR)strTName, nSelInitValue);
 
 	pdts->tDT.tHInfo.nLastID = nSelInitValue;
 	return UpdateDBF_Table(pdts);
@@ -2245,11 +2268,12 @@ INT32				CASIDBFUtil::UpdateDBF_TItem(PDBF_TABLE_SEARCH pdts, PDBF_TABLE_ITEM_HE
 			ChkOpTickCntLog(101);
 		}
 		SetFilePointerEx(ASI_DBF_FILE_HANDLE_WRITE, nCurFP);
+		nRtn = 0;
 	} while (FALSE);
 	
 	if(lpEncBuff)	FreeCommonBuff(&lpEncBuff);
 
-	return 0;
+	return nRtn;
 }
 //---------------------------------------------------------------------
 
@@ -2334,6 +2358,9 @@ INT32		CASIDBFUtil::ExeSelectDBFByID(CString strTName, UINT32 nID)
 	}while(FALSE);
 	m_tMutex.UnLock();
 
+	if(nRtn == ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE)
+		return ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE;
+
 	if(!nFP)
 	{
 		WriteLogN("not find table info : [%s]", (char *)(LPCSTR)strTName);
@@ -2363,6 +2390,9 @@ INT32		CASIDBFUtil::ExeUpdateDBFByID(CString strTName, UINT32 nID)
 	}while(FALSE);
 	m_tMutex.UnLock();
 
+	if(nRtn == ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE)
+		return ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE;
+
 	if(!nFP)
 	{
 		WriteLogN("not find table info : [%s]", (char *)(LPCSTR)strTName);
@@ -2391,6 +2421,9 @@ INT32		CASIDBFUtil::ExeDeleteDBFByID(CString strTName, UINT32 nID)
 		nFP = pdts->_find_fp(nID);
 	}while(FALSE);
 	m_tMutex.UnLock();
+
+	if(nRtn == ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE)
+		return ASI_DBF_ERROR_TYPE_V2_NOT_FIND_DBF_TABLE;
 
 	if(!nFP)
 	{
@@ -2500,7 +2533,7 @@ INT32		CASIDBFUtil::ExeSelectDBF(CString strTName, UINT64 nFP)
 
 		SetFilePointerEx(ASI_DBF_FILE_HANDLE_WRITE, nCurFP);
 		pMember->m_tCurSelTable = pdts;
-
+		nRtn = ASI_DBF_ERROR_TYPE_SUCCESS;
 	} while (FALSE);
 
 	m_tMutex.UnLock();
@@ -3230,7 +3263,7 @@ INT32				CASIDBFUtil::ExeUpdateDBF(CString strTName, PUINT64 pnFP)
 
 		if(*pnFP == 0)
 		{
-			WriteLogE("ExeUpdateDBF fail : FP value is 0 : [%s][%.8x]", m_strDBFName, *pnFP);
+			WriteLogE("ExeUpdateDBF fail : FP value is 0 : [%s][%.8x]", (char *)(LPCTSTR)m_strDBFName, *pnFP);
 			nRtn = -2;
 			break;
 		}
@@ -3261,7 +3294,7 @@ INT32				CASIDBFUtil::ExeUpdateDBF(CString strTName, PUINT64 pnFP)
 			ChkOpTickCntLog();
 			if(SetER(ExeSelectDBF(strTName, *pnFP)))
 			{
-				WriteLogE("ExeUpdateDBF fail : old item read fail : [%s][%.8x]", strTName, *pnFP);
+				WriteLogE("ExeUpdateDBF fail : old item read fail : [%s][%.8x]", (char *)(LPCTSTR)strTName, *pnFP);
 				nRtn = GetER();
 				break;
 			}
@@ -3322,7 +3355,7 @@ INT32				CASIDBFUtil::ExeUpdateDBF(CString strTName, PUINT64 pnFP)
 
 		if(!lpBuff)
 		{
-			WriteLogE("ExeUpdateDBF fail : memory allocation fail : [%s][%.8x][%u]", strTName, *pnFP, tDTIH.nCurBlockSize);
+			WriteLogE("ExeUpdateDBF fail : memory allocation fail : [%s][%.8x][%u]", (char *)(LPCTSTR)strTName, *pnFP, tDTIH.nCurBlockSize);
 			nRtn = ASI_DBF_ERROR_TYPE_MEM_ALLOC_FAIL;
 			break;
 		}
@@ -3512,7 +3545,7 @@ INT32		CASIDBFUtil::ExeDeleteDBF(CString strTName, UINT64 nFP)
 			ChkOpTickCntLog();
 			if(SetER(ExeSelectDBF(strTName, nFP)))
 			{
-				WriteLogE("ExeDeleteDBF fail : old item read fail : [%s][%.8x]", strTName, nFP);
+				WriteLogE("ExeDeleteDBF fail : old item read fail : [%s][%.8x]", (char *)(LPCTSTR)strTName, nFP);
 				SetFilePointerEx(ASI_DBF_FILE_HANDLE_WRITE, nCurFP);	
 				nRtn = GetER();
 				break;
@@ -3674,8 +3707,3 @@ INT32		CASIDBFUtil::ApplyKeyToFPInfo(PDBF_TABLE_SEARCH pdts)
 	}
 	return nRtn;
 }
-
-
-
-
-
