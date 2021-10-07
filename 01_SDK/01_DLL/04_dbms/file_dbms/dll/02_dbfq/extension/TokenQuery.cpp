@@ -605,7 +605,7 @@ CString		CTokenQuery::NextToken_WhereCdt(CString& strCmd, CString& strName, CStr
 		}
 		else if((chChk == ' ' || chChk == '\t') && !nFindCdt && nWaitValue && nWaitSpace && (nWaitAnd ? (nWaitAnd == 2 ? TRUE : FALSE) : TRUE) && strValue.IsEmpty() == FALSE)
 		{
-			nAndIdx = 0;
+//			nAndIdx = 0;
 			break;
 		}
 		else
@@ -798,5 +798,3 @@ CString	CTokenQuery::ReverseString(LPCTSTR lpInput, INT32 nLen)
 	return lpInput;
 }
 //-----------------------------------------------------------------
-
-
