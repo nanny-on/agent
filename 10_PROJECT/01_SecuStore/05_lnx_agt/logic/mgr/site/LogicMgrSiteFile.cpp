@@ -186,154 +186,157 @@ void		CLogicMgrSiteFile::CheckSiteFile(String strFilePath)
 
 void		CLogicMgrSiteFile::CheckSiteFile(PDB_SITE_FILE pdsf_src)
 {
-	DB_SITE_FILE dsf;
-	PDB_SITE_FILE pdsf = NULL;
-	String strFullFileName;
-	CHAR szFileInfo[CHAR_MAX_SIZE] = {0, };
+	PDB_SITE_FILE pDsf = NULL;
+	PDB_SITE_FILE pFindDsf = NULL;
+	char acPath[MAX_PATH] = {0, }; 
+	INT32 nSize = sizeof(DB_SITE_FILE);
+	CHAR szSha256[ASIHASH_SHA_TYPE_256_LEN+2] = {0, };
 
-	if(pdsf_src == NULL)
+	if(pdsf_src == NULL || nSize < 1)
 		return;
-	
-	dsf = *pdsf_src;
-	pdsf = t_ManageSiteFile->FindPosSKeyID_Item(dsf.strFeKey, SS_SITE_FILE_KEY_TYPE_FE);
 
-	if(pdsf)
+	pDsf = (PDB_SITE_FILE)malloc(nSize);
+	if(pDsf == NULL)
+		return;
+
+	pDsf->strFeKey = pdsf_src->strFeKey;
+	pDsf->strFilePath = pdsf_src->strFilePath;
+	pDsf->strFileName = pdsf_src->strFileName;
+	pDsf->nPeBit = 0;
+	pDsf->nPeType = 0;
+	pDsf->nUsedFlag = 1;
+
+	pFindDsf = t_ManageSiteFile->FindPosSKeyID_Item(pDsf->strFeKey, SS_SITE_FILE_KEY_TYPE_FE);
+	if(pFindDsf)
 	{
-		dsf = *pdsf;
+		pDsf->nID = pFindDsf->nID;
+		pDsf->nRegSvrID = pFindDsf->nRegSvrID;
+		pDsf->nRegDate = pFindDsf->nRegDate;
+		pDsf->nUsedMode	= pFindDsf->nUsedMode;
+		pDsf->nSyncSvrStep = pFindDsf->nSyncSvrStep;
+		pDsf->strFileHash = pFindDsf->strFileHash;
+		pDsf->nFileSize = pFindDsf->nFileSize;
 	}
 	else
 	{
-		strFullFileName = SPrintf("%s/%s", dsf.strFilePath.c_str(), dsf.strFileName.c_str());
-
-		dsf.nRegDate		= GetCurrentDateTimeInt();
-		dsf.nUsedMode		= STATUS_USED_MODE_ON;
-		dsf.nSyncSvrStep	= SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO;
-
-		{
-			ASI_FILE_CERT_INFO tAFCI;
-			strncpy(tAFCI.szCheckFileName, strFullFileName.c_str(), MAX_PATH-1);
-
-			dsf.strPubName		= tAFCI.szPubName;
-			//dsf.strPubName.Remove('\'');
-			remove_char_in_str(dsf.strPubName, '\'');
-			dsf.strPubSN		= tAFCI.szPubSN;			//dsf.strPubName.Remove('\'');			
-			dsf.strCntName		= tAFCI.szCntPubName;
-			//dsf.strCntName.Remove('\'');
-			remove_char_in_str(dsf.strCntName, '\'');
-			dsf.strCntSN		= tAFCI.szCntPubSN;			//dsf.strPubName.Remove('\'');			
-		}
-
-		{
-			ZeroMemoryExt(szFileInfo);
-//			t_ASIFIDLLUtil->ASIFI_GetFileDescription(strFullFileName.c_str(), szFileInfo);
-			dsf.strFileDescr = szFileInfo;
-			//dsf.strFileDescr.Remove('\'');
-			remove_char_in_str(dsf.strFileDescr, '\'');
-		}
-		{
-			ZeroMemoryExt(szFileInfo);
-//			t_ASIFIDLLUtil->ASIFI_GetFileVersion(strFullFileName.c_str(), szFileInfo);
-			dsf.strFileVersion = szFileInfo;
-//			dsf.strFileVersion.Remove('\'');
-			remove_char_in_str(dsf.strFileVersion, '\'');
-		}
-		{
-			ZeroMemoryExt(szFileInfo);
-//			t_ASIFIDLLUtil->ASIFI_GetFileSpecialValue(strFullFileName.c_str(), "CompanyName", szFileInfo);
-			dsf.strPublisherName = szFileInfo;
-//			dsf.strPublisherName.Remove('\'');
-			remove_char_in_str(dsf.strPublisherName, '\'');
-		}
-		{
-			ZeroMemoryExt(szFileInfo);
-//			t_ASIFIDLLUtil->ASIFI_GetFileSpecialValue(strFullFileName.c_str(), "ProductName", szFileInfo);
-			dsf.strProductName = szFileInfo;
-//			dsf.strProductName.Remove('\'');
-			remove_char_in_str(dsf.strProductName, '\'');
-		}
-		{
-			ZeroMemoryExt(szFileInfo);
-			SHAFile(ASIHASH_SHA_LEN_TYPE_256, strFullFileName.c_str(), szFileInfo, CHAR_MAX_SIZE-1);
-			dsf.strFileHash = szFileInfo;
-		}
-		{
-			dsf.nFileSize = GetFileSizeExt(strFullFileName.c_str());
-		}
-		{
-//			dsf.nPeBit = t_ASIFIDLLUtil->ASIFI_GetFilePEMagic(strFullFileName.c_str());
-//			dsf.nPeType = t_ASIFIDLLUtil->ASIFI_GetFilePEType(strFullFileName.c_str());
-		}		
+		pDsf->nID = 0;
+		pDsf->nRegSvrID = 0;
+		pDsf->nRegDate = GetCurrentDateTimeInt();
+		pDsf->nUsedMode = STATUS_USED_MODE_ON;
+		pDsf->nSyncSvrStep = SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO;
+		snprintf(acPath, MAX_PATH-1, "%s/%s", pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
+		acPath[MAX_PATH-1] = 0;
+		SHAFile(ASIHASH_SHA_LEN_TYPE_256, acPath, szSha256, ASIHASH_SHA_TYPE_256_LEN+1);
+		szSha256[ASIHASH_SHA_TYPE_256_LEN] = 0;
+		pDsf->strFileHash = szSha256;
+		pDsf->nFileSize = GetFileSizeExt(acPath);
 	}
 
-	SetSiteFile(dsf);
-	return;
+	SetSiteFile(pDsf, FALSE);
+	safe_free(pDsf);
+}
+
+void		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
+{
+	DB_SITE_FILE dsf;
+	PDB_SITE_FILE pFindDsf = NULL;
+	INT32 nSize = sizeof(DB_SITE_FILE);
+	CHAR szSha256[ASIHASH_SHA_TYPE_256_LEN+2] = {0, };
+
+	if(pChkFile == NULL || nSize < 1)
+		return;
+
+	dsf.strFeKey = pChkFile->stRetInfo.acWhiteHash;
+	dsf.strFilePath = pChkFile->stFileInfo.acPath;
+	dsf.strFileName = pChkFile->stFileInfo.acFile;
+	dsf.nPeBit = 0;
+	dsf.nPeType = 0;
+	dsf.nUsedFlag = 1;
+
+	pFindDsf = t_ManageSiteFile->FindPosSKeyID_Item(dsf.strFeKey, SS_SITE_FILE_KEY_TYPE_FE);
+	if(pFindDsf)
+	{
+		dsf.nID = pFindDsf->nID;
+		dsf.nRegSvrID = pFindDsf->nRegSvrID;
+		dsf.nRegDate = pFindDsf->nRegDate;
+		dsf.nUsedMode	= pFindDsf->nUsedMode;
+		dsf.nSyncSvrStep = pFindDsf->nSyncSvrStep;
+		dsf.strFileHash = pFindDsf->strFileHash;
+		dsf.nFileSize = pFindDsf->nFileSize;
+	}
+	else
+	{
+		dsf.nID = 0;
+		dsf.nRegSvrID = 0;
+		dsf.nRegDate = GetCurrentDateTimeInt();
+		dsf.nUsedMode = STATUS_USED_MODE_ON;
+		dsf.nSyncSvrStep = SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO;
+		SHAFile(ASIHASH_SHA_LEN_TYPE_256, pChkFile->stFileInfo.acFullPath, szSha256, ASIHASH_SHA_TYPE_256_LEN+1);
+		szSha256[ASIHASH_SHA_TYPE_256_LEN] = 0;
+		dsf.strFileHash = szSha256;
+		dsf.nFileSize = GetFileSizeExt(pChkFile->stFileInfo.acFullPath);
+	}
+
+	SetSiteFile(&dsf, TRUE);
 }
 //---------------------------------------------------------------------------
 
-void		CLogicMgrSiteFile::SetSiteFile(DB_SITE_FILE& dsf)
+void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 {
-	{
-		WriteLogN("[%s] remain site file to file : fp[%s]:fn[%s]", 
-					m_strLogicName.c_str(),
-					dsf.strFilePath.c_str(), dsf.strFileName.c_str());
-	}
-		
-	INT32 nOldItem = dsf.nID;
-	t_ManageSiteFile->ApplySiteFile(dsf);
+	INT32 nOldItem = 0;
+
+	if(pDsf == NULL)
+		return;
+	if(bRealTime)
+		WriteLogN("[%s] remain real-time created file to server : fp[%s]:fn[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
+	else
+		WriteLogN("[%s] remain created file to server : fp[%s]:fn[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
+	nOldItem = pDsf->nID;
+	t_ManageSiteFile->ApplySiteFile(*pDsf);
 	
-	{	
-		SendToken.Set(1024);
-		SendToken.TokenAdd_32(1);
-		t_ManageSiteFile->SetPkt(&dsf, SendToken);
+	SendToken.Set(1024);
+	SendToken.TokenAdd_32(1);
+	t_ManageSiteFile->SetPkt(pDsf, SendToken);
 		
-		if(!nOldItem)
-		{
-//			t_ASIEPSAPPDLLUtil->AddSiteFile(SendToken.GetData(), SendToken.GetLength());
-			SendData_Link(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-		}
-
-		do 
-		{
-			{
-				PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
-				if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-							((dsf.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-
-			{
-				PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
-				if(pdata && 
-					(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-					((dsf.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-
-			{
-				PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
-				if(pdata && 
-					(pdata->nRTFGMode & SS_PO_NC_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-					((dsf.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-		} while (FALSE);
-
-		SendToken.Clear();
-	}
-
+	if(!nOldItem)
 	{
-
+		SendData_Link(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
 	}
-	return;
+
+	do 
+	{
+		{
+			PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
+			if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
+						((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
+			{
+				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+				break;
+			}
+		}
+		{
+			PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
+			if(pdata && 
+				(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
+				((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
+			{
+				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+				break;
+			}
+		}
+		{
+			PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
+			if(pdata && 
+				(pdata->nRTFGMode & SS_PO_NC_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
+				((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
+			{
+				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+				break;
+			}
+		}
+	} while (FALSE);
+
+	SendToken.Clear();
 }
 //---------------------------------------------------------------------------
 

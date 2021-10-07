@@ -131,13 +131,16 @@ void		CLogicMgrHostSys::SendPkt_Edit()
 	INT32 nSendPkt = 1;	
 	DB_HOST_SYS dhs;
 
+	memset(&dhs, 0, sizeof(dhs));
 	{
-		CSystemInfo tSystemInfo;
-		dhs.nOsID	= tSystemInfo.GetSystemID();
-		dhs.nOsSP	= tSystemInfo.GetSPID();
-		dhs.nOsPa	= tSystemInfo.GetSystemPaType();
-		dhs.nOsPd	= tSystemInfo.GetSystemPdType();
-
+//		CSystemInfo tSystemInfo;
+		if(t_SystemInfo != NULL)
+		{
+			dhs.nOsID	= t_SystemInfo->GetSystemID();
+			dhs.nOsSP	= t_SystemInfo->GetSPID();
+			dhs.nOsPa	= t_SystemInfo->GetSystemPaType();
+			dhs.nOsPd	= t_SystemInfo->GetSystemPdType();
+		}
 		// 20200724 add jhjung
 		//dhs.strOsPdLux	= "???????????????????????";
 	}
@@ -183,12 +186,16 @@ void		CLogicMgrHostSys::SendPkt_SysInfo()
 	INT32 nSendPkt = 1;	
 	DB_HOST_SYS dhs;
 
+	memset(&dhs, 0, sizeof(dhs));
 	{
-		CSystemInfo tSystemInfo;
-		dhs.nOsID	= tSystemInfo.GetSystemID();
-		dhs.nOsSP	= tSystemInfo.GetSPID();
-		dhs.nOsPa	= tSystemInfo.GetSystemPaType();
-		dhs.nOsPd	= tSystemInfo.GetSystemPdType();
+//		CSystemInfo tSystemInfo;
+		if(t_SystemInfo != NULL)
+		{
+			dhs.nOsID	= t_SystemInfo->GetSystemID();
+			dhs.nOsSP	= t_SystemInfo->GetSPID();
+			dhs.nOsPa	= t_SystemInfo->GetSystemPaType();
+			dhs.nOsPd	= t_SystemInfo->GetSystemPdType();
+		}
 	}
 
 	SendToken.Clear();

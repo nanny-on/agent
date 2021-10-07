@@ -36,6 +36,7 @@ private:
 	INT32		IsExistMatchInfo(PDB_PO_IN_PTN_SP_RULE pdata);
 
 public:
+	INT32		SendMgr_Ext_Req(PPIPE_PO_IN_REQ pPoInReq);
 	CLogicPoInPtnSPRule();
     ~CLogicPoInPtnSPRule();
 };

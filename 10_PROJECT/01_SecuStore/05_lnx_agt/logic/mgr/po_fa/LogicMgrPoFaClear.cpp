@@ -379,8 +379,8 @@ INT32		CLogicMgrPoFaClear::ApplyPolicy_Unit(UINT32 nUnitID, MEM_FIND_ORDER_INFO&
 INT32		CLogicMgrPoFaClear::ApplyPolicy_Unit(PDB_PO_FA_CLEAR_UNIT pdpfcu, MEM_FIND_ORDER_INFO& tMFOI)
 {
 	CFileUtil tFileUtil;
-	CSystemInfo tSysInfo;
-	CProcUtil tProcUtil;	
+//	CSystemInfo tSysInfo;
+//	CProcUtil tProcUtil;	
 	INT32 i, nRetVal = 0;
 	{
 		tFileUtil.SetEnvPathRegKey(STR_REG_DEFAULT_SVC_PATH_ENV_PATH);

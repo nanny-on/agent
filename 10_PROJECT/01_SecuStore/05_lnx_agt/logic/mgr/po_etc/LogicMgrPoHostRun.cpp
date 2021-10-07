@@ -112,7 +112,7 @@ INT32		CLogicMgrPoHostRun::AnalyzePkt_FromMgr_Edit_Ext()
 INT32		CLogicMgrPoHostRun::ApplyPolicy()
 {
 	CProcUtil tProcUtil;
-	CSystemInfo tSysInfo;
+//	CSystemInfo tSysInfo;
 	INT32 nRetVal = 0;
 	
 	PDB_PO_HOST_RUN pdphr = (PDB_PO_HOST_RUN)t_DeployPolicyUtil->GetCurPoPtr(m_nPolicyType);

@@ -91,9 +91,11 @@ INT32		CLogicPWEvtMon::RunBootTimeOp(UINT32 nBootType)
 INT32		CLogicPWEvtMon::InitEnv()
 {
 	INT32 nContinue = 0;
-	CSystemInfo tSystemInfo;
-	CProcUtil tProcUtil;
-	switch(tSystemInfo.GetSystemID())
+//	CSystemInfo tSystemInfo;
+	UINT64 nSystemID = 0;
+	if(t_SystemInfo != NULL)
+		nSystemID = t_SystemInfo->GetSystemID();
+	switch(nSystemID)
 	{
 		case ASI_SYSTEM_ID_VISTA:
 		case ASI_SYSTEM_ID_7:

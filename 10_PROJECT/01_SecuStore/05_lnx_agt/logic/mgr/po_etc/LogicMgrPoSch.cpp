@@ -217,8 +217,8 @@ INT32		CLogicMgrPoSch::ApplyPolicy_Unit(UINT32 nUnitID)
 
 INT32		CLogicMgrPoSch::ApplyPolicy_Unit(PDB_PO_SCH_UNIT pdphpsu)
 {
-	CSystemInfo tSysInfo;
-	CProcUtil tProcUtil;
+//	CSystemInfo tSysInfo;
+//	CProcUtil tProcUtil;
 
 	//if(IsValidSchedule(tIS.all, nLastChkTime) == 0)
 	//{

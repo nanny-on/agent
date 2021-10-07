@@ -594,8 +594,14 @@ INT32		CLogicMgrPoDeployFile::IsValidTarget(UINT32 nUnitID)
 	t_ManagePoDeployFileUnitTarPkg->GetKeyIDList(nUnitID, tUnitTIDList);
 
 	{
-		CSystemInfo tSysInfo;
-
+//		CSystemInfo tSysInfo;
+		UINT64 nProcArch = 0;
+		UINT64 nSystemID = 0;
+		if(t_SystemInfo != NULL)
+		{
+			nProcArch = t_SystemInfo->GetASIProcArchitecture();
+			nSystemID = t_SystemInfo->GetSystemID();
+		}
 		TListIDItor begin, end;
 		begin = tUnitTIDList.begin();	end = tUnitTIDList.end();
 		for(begin; begin != end; begin++)
@@ -612,8 +618,7 @@ INT32		CLogicMgrPoDeployFile::IsValidTarget(UINT32 nUnitID)
 				continue;
 			}
 
-			if(pdpdftu->nSysMode & tSysInfo.GetASIProcArchitecture() && 
-				pdpdftu->nSysInfo & tSysInfo.GetSystemID())
+			if(pdpdftu->nSysMode & nProcArch && pdpdftu->nSysInfo & nSystemID)
 			{
 				return 0;
 			}
@@ -780,8 +785,12 @@ INT32		CLogicMgrPoDeployFile::ComppareInfo_AppWiz(UINT32 nChkUnitID)
 
 	if(t_ASISIDLLUtil)
 	{
-		CSystemInfo tSysInfo;
-		INT32 nProcArchitect = (INT32)tSysInfo.GetASIProcArchitecture();
+//		CSystemInfo tSysInfo;
+		INT32 nProcArchitect = 0;
+		if(t_SystemInfo != NULL)
+		{
+			nProcArchitect = (INT32)t_SystemInfo->GetASIProcArchitecture();
+		}
 		t_ASISIDLLUtil->GetSwInfo(nProcArchitect, (GetSwInfoType)GetSoftwareInfo, (PVOID)&tSwInfoList);
 	}
 

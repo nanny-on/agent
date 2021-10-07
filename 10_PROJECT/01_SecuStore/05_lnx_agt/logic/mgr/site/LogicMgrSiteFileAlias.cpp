@@ -219,7 +219,7 @@ void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 					data.strFilePath.c_str(), data.strFileName.c_str());
 	}
 		
-	INT32 nOldItem = data.nID;
+//	INT32 nOldItem = data.nID;
 	t_ManageSiteFileAlias->ApplySiteFileAlias(data);
 	
 	{	

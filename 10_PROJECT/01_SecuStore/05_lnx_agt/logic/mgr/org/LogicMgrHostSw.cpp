@@ -138,8 +138,10 @@ void		CLogicMgrHostSw::SendPkt_HostSw()
 	TListDBHostSw tDBHostSwList; 
 	if(t_ASISIDLLUtil)
 	{
-		CSystemInfo tSysInfo;
-		INT32 nProcArchitect = (INT32)tSysInfo.GetASIProcArchitecture();
+//		CSystemInfo tSysInfo;
+		INT32 nProcArchitect = 0;
+		if(t_SystemInfo != NULL)
+			nProcArchitect = (INT32)t_SystemInfo->GetASIProcArchitecture();
 		nRetVal = t_ASISIDLLUtil->GetSwInfo(nProcArchitect, GetSoftwareInfo, (PVOID)&tSwInfoList);
 		if(nRetVal != 0)
 		{
@@ -231,9 +233,11 @@ void		CLogicMgrHostSw::SendPkt_HostSw_Cur()
 	TListDBHostSw tDBHostSwList;
 	if(t_ASISIDLLUtil)
 	{
-		CSystemInfo tSysInfo;
+//		CSystemInfo tSysInfo;
 		INT32 nRetVal=0;
-		INT32 nProcArchitect = (INT32)tSysInfo.GetASIProcArchitecture();
+		INT32 nProcArchitect = 0;
+		if(t_SystemInfo != NULL)
+			nProcArchitect = (INT32)t_SystemInfo->GetASIProcArchitecture();
 		nRetVal = t_ASISIDLLUtil->GetSwInfo(nProcArchitect, GetSoftwareInfo, (PVOID)&tSwInfoList);
 		if(nRetVal != 0)
 		{

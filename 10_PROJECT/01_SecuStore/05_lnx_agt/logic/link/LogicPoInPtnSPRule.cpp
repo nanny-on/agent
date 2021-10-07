@@ -145,6 +145,65 @@ INT32		CLogicPoInPtnSPRule::AnalyzePkt_FromLink_Ext_Req()
 	
 	return SetHdrAndRtn(AZPKT_CB_RTN_SUCCESS);
 }
+
+INT32		CLogicPoInPtnSPRule::SendMgr_Ext_Req(PPIPE_PO_IN_REQ pPoInReq)
+{
+	DB_PO_IN_PTN_SP_RULE data;
+	PDB_PO_IN_PTN_SP pdata_sp = (PDB_PO_IN_PTN_SP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_SP);
+
+	if(pPoInReq == NULL)
+	{
+		WriteLogE("[%s] invalid input data", m_strLogicName.c_str());
+		return -1;
+	}
+
+	if(is_file(pPoInReq->acReqFullPath) != REG_FILE)
+	{
+		WriteLogE("[%s] invalid request path (%s) (%d)", m_strLogicName.c_str(), pPoInReq->acReqFullPath, errno);
+		return -2;
+	}
+
+	if(pPoInReq->acReqPath[0] == 0)
+	{
+		if(get_dirname(pPoInReq->acReqFullPath, pPoInReq->acReqPath, MAX_PATH-1) == NULL)
+		{
+			WriteLogE("[%s] fail to get dir name (%s)", m_strLogicName.c_str(), pPoInReq->acReqFullPath);
+			return -3;
+		}
+		pPoInReq->acReqPath[MAX_PATH-1] = 0;
+	}
+	if(pPoInReq->acReqFile[0] == 0)
+	{
+		if(get_basename(pPoInReq->acReqFullPath, pPoInReq->acReqFile, MAX_FILE_NAME-1) == NULL)
+		{
+			WriteLogE("[%s] fail to get base name (%s)", m_strLogicName.c_str(), pPoInReq->acReqFullPath);
+			return -4;
+		}
+		pPoInReq->acReqFile[MAX_FILE_NAME-1] = 0;
+	}
+
+	DWORD dwFileType = AS_INVALID_FILE;
+	ASI_WENG_WL_EX tAWWE;
+	memset(&tAWWE, 0, sizeof(ASI_WENG_WL_EX));
+
+	t_ASIWENGDLLUtil->GetWL(pPoInReq->acReqFullPath, (PVOID)&tAWWE, (DWORD)sizeof(ASI_WENG_WL_EX), &dwFileType);
+	if(dwFileType == AS_INVALID_FILE)
+	{
+		WriteLogE("[%s] invalid execute file type (%s) (%d)", m_strLogicName.c_str(), pPoInReq->acReqFullPath, dwFileType);
+		return -5;
+	}
+
+	data.strFileKey = tAWWE.acWhiteHash;
+	data.strFilePath = pPoInReq->acReqPath;
+	data.strFileName = pPoInReq->acReqFile;
+	data.nReqDay = pPoInReq->nReqDay;
+	data.nReqLevel = pPoInReq->nReqLevel;
+	data.tDPH.nUsedMode = STATUS_USED_MODE_ON;
+
+	t_LogicMgrPoInPtnSPRule->SendPkt_Req(&data);
+	return 0;
+}
+
 //---------------------------------------------------------------------------
 
 INT32		CLogicPoInPtnSPRule::AnalyzePkt_FromLink_Del_Ext()

@@ -27,7 +27,7 @@ private:
 //	CASIDBFQDLLUtil*	m_tASIDBFQDLLUtil;
 	INT32				m_nInitLogic;
 	String				m_strDBFName;
-	CSystemInfo			m_tSysInfo;
+//	CSystemInfo			m_tSysInfo;
 
 	INT32				m_nInitPatchUtil;
 	INT32				m_nInitPatchWsus;

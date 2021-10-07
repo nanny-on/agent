@@ -173,6 +173,8 @@ INT32		CLogicMgrPoInPtnWL::ApplyPolicy()
 					WriteLogE("[%s] can not reload gwo ptn file  : [%s]", m_strLogicName.c_str(), pdata->tDPFI.strSaveName.c_str());
 					return 0;
 				}
+				if(t_ThreadPoInAccFile != NULL)
+					t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE);
 				t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);
 			}
 		}

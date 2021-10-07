@@ -178,10 +178,12 @@ void		CLogicMgrLogSecu::SetLogSecu(DB_LOG_SECU& dls)
 		{
 			SendData_Mgr(G_TYPE_LOG_SECU, G_CODE_COMMON_SYNC, SendToken);
 		}
+/*
 		if(!(dls.nSkipTarget & SS_ENV_LOG_OPTION_FLAGE_SKIP_SAVE_AGENT))		
 		{
 			SendData_Link(G_TYPE_LOG_SECU, G_CODE_COMMON_SYNC, SendToken);
 		}
+*/
 		SendToken.Clear();
 	}
 	return;

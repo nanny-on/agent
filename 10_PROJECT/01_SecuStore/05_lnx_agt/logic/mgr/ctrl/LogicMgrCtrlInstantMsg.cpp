@@ -85,21 +85,13 @@ INT32		CLogicMgrCtrlInstantMsg::ApplyPolicy(PMEM_CTRL_INSTANT_MSG pInfo)
 
 	m_nEvtOpType = EVENT_OPERATION_TYPE_CONTROL;
 	
-	CSystemInfo tSysInfo;
+//	CSystemInfo tSysInfo;
 	ASI_TS_INFO tATI;
 	ASI_TS_MGR_PARAM tATMP;
 	{
 		sprintf_ext(CHAR_MAX_SIZE, tATI.szTaskName, STR_TS_NAME_INSTANT_MSG, GetTickCount()); 
-		if(tSysInfo.IsExistLoginSession())
-		{
-			tATI.nChkPeriod = ASI_TS_CHECK_PREIOD_TYPE_ONCE;
-			tATI.nStartTime	= GetCurrentDateTimeInt() + 5;
-		}
-		else
-		{
-			tATI.nChkPeriod = ASI_TS_CHECK_PREIOD_TYPE_USER_LOGIN;
-			tATI.nStartTime	= GetCurrentDateTimeInt();
-		}
+		tATI.nChkPeriod = ASI_TS_CHECK_PREIOD_TYPE_USER_LOGIN;
+		tATI.nStartTime	= GetCurrentDateTimeInt();
 
 		tATMP.nTSAutoDel		= 1;
 		tATMP.nTSSingleRun		= 1;
