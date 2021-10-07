@@ -193,7 +193,7 @@ INT32		CASIDBFUtil::RemoveDBF(UINT32 nRenameMode)
 	if(nRenameMode)
 	{
 		CString strDBFDBName;
-		strDBFDBName.Format("%s_%u_%u", m_strDBFName, GetCurrentDateTimeInt(), GetTickCount());
+		strDBFDBName.Format("%s_%u_%u", (char *)(LPCSTR)m_strDBFName, GetCurrentDateTimeInt(), GetTickCount());
 		MoveFileEx((LPCSTR)m_strDBFName, (LPCSTR)strDBFDBName);
 	}
 	else
@@ -320,14 +320,14 @@ INT32		CASIDBFUtil::RecoveryDBF(UINT32 nRenameMode)
 INT32		CASIDBFUtil::BackupDBF(CString strBkFileName)
 {
 	if(!GetFileHandle(ASI_DBF_FILE_HANDLE_READ))		return ASI_DBF_ERROR_TYPE_INVALID_HANDLE;
-
+/*
 	UINT64 nCurFSZ = 0, nNewFSZ = 0;
 	{
 		DWORD dwHigh, dwLow;
 		dwLow = GetFileSize(GetFileHandle(ASI_DBF_FILE_HANDLE_READ), &dwHigh);
 		nCurFSZ	= MAKEUINT64(dwLow, dwHigh);
 	}
-
+*/
 	CASIDBFUtil tASIDBFUtil;
 	CString strTempDBFName = strBkFileName;
 	if(SetER(tASIDBFUtil.CreateDBF(strTempDBFName, "", "")))
@@ -483,7 +483,3 @@ INT32		CASIDBFUtil::UpdateDBF_DI(PDBF_DATABASE pdd)
 	return 0;
 }
 //---------------------------------------------------------------------
-
-
-
-
