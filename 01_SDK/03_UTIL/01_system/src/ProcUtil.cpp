@@ -111,7 +111,7 @@ BOOL CProcUtil::UpdateProcStart(LPCSTR lpExePathName, LPCSTR lpExeFileName, LPCS
 	if(nChildPid==0)
 	{
 		nRetVal = execl(lpExePathName, lpExeFileName, "-u", "-f", lpZipPathName, "-d", lpUpdatePathName, NULL);
-		if(nChildPid==-1)
+		if(nRetVal==-1)
 		{
 			WriteLogE("[UpdateProcStart] fail to exec (%d)", errno);
 			return FALSE;
@@ -336,5 +336,3 @@ BOOL CProcUtil::Token(LPTSTR strInput, char pTok, LPTSTR pszRtn, BOOL bReverse)
 	}
 	return TRUE;
 }
-
-
