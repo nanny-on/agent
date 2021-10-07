@@ -587,7 +587,7 @@ INT32		CQueryUtil::AnalysisCmd_Alter(CString strCmd)
 			UINT32 nDefLen = Token.NextToken_UInt();	
 			//strRmCmd = RemoveLastChar(strRmCmd, ';');
 
-			WriteLogN("relen column : [%s][%s][%u]", m_strTName, strOldCN, nDefLen);
+			WriteLogN("relen column : [%s][%s][%u]", (char *)(LPCSTR)m_strTName, (char *)(LPCTSTR)strOldCN, nDefLen);
 
 			DBFQ_CDT_INFO tDCI;
 			tDCI.strName	= strOldCN.Trim();
@@ -599,7 +599,7 @@ INT32		CQueryUtil::AnalysisCmd_Alter(CString strCmd)
 			m_nQueryCmdCode = ASI_DBFQ_QUERY_COMMAND_CODE_ALTER_TB_AUTOINCREMENT;		
 			UINT32 nInitValue = Token.NextToken_Int();
 			
-			WriteLogN("auto increment column : [%s][%u]", m_strTName, nInitValue);
+			WriteLogN("auto increment column : [%s][%u]", (char *)(LPCSTR)m_strTName, nInitValue);
 
 			DBFQ_CDT_INFO tDCI;
 			tDCI.nDefault	= nInitValue;
@@ -910,7 +910,8 @@ INT32		CQueryUtil::ExportCmd_WhereBetAndNumValue(CString strCmd, UINT64& nSValue
 	INT32	nChkIdx = 0;
 	INT32	nValueFind = 0;
 	INT32	nValuePos = 0;
-	LPCTSTR lpCmd = strCmd, lpCmdLow = strCmdLow;
+	LPCTSTR lpCmd = (LPCTSTR)strCmd;
+//	LPCTSTR lpCmdLow = (LPCTSTR)strCmdLow;
 	INT32	nIgnoreSpace = 0;
 
 	INT32 nIdx = 0;
@@ -1043,11 +1044,11 @@ CString		CQueryUtil::RemoveFirstLastChar(CString strValue, CHAR szFRmChar, CHAR 
 	return strRtn;
 }
 //------------------------------------------------------------
-
+/*
 CString		CQueryUtil::RemoveLastChar(CString strValue, CHAR szLRmChar)
 {
 	CString strRtn, strFRmRtn, strLRmRtn;
-	LPCTSTR lpValue = strValue;
+	LPCTSTR lpValue = (LPCTSTR)strValue;
 	INT32 nChecked = 0;
 
 	lpValue = strFRmRtn;
@@ -1080,6 +1081,7 @@ CString		CQueryUtil::RemoveLastChar(CString strValue, CHAR szLRmChar)
 	}
 	return strRtn;
 }
+*/
 //------------------------------------------------------------
 
 CString	CQueryUtil::ReverseString(LPCTSTR lpInput, INT32 nLen)
@@ -1100,4 +1102,3 @@ CString	CQueryUtil::ReverseString(LPCTSTR lpInput, INT32 nLen)
 	return lpInput;
 }
 //------------------------------------------------------------
-
