@@ -71,35 +71,38 @@ INT32			CDBMgrPoHostRun::LoadDB(TListDBPoHostRun& tDBPoHostRunList)
 
 		tDPH						= GetDBField_PoHDR(nIndex);
 
-		dphr.nRunOption				= GetDBField_UInt(nIndex++);
-		dphr.nRmLogDay				= GetDBField_UInt(nIndex++);
-		dphr.nLgnConPeriod			= GetDBField_UInt(nIndex++);
-		dphr.nMgrShowType			= GetDBField_UInt(nIndex++);
-		dphr.nShowLogDay			= GetDBField_UInt(nIndex++);
-		dphr.nBootChkType			= GetDBField_UInt(nIndex++);
-		dphr.nIntegrityMode			= GetDBField_UInt(nIndex++);
-		dphr.nCrossAuthMode			= GetDBField_UInt(nIndex++);
-		dphr.nOncePktNum			= GetDBField_UInt(nIndex++);
+		if(tDPH.nID != 0)
+		{
+			dphr.nRunOption				= GetDBField_UInt(nIndex++);
+			dphr.nRmLogDay				= GetDBField_UInt(nIndex++);
+			dphr.nLgnConPeriod			= GetDBField_UInt(nIndex++);
+			dphr.nMgrShowType			= GetDBField_UInt(nIndex++);
+			dphr.nShowLogDay			= GetDBField_UInt(nIndex++);
+			dphr.nBootChkType			= GetDBField_UInt(nIndex++);
+			dphr.nIntegrityMode			= GetDBField_UInt(nIndex++);
+			dphr.nCrossAuthMode			= GetDBField_UInt(nIndex++);
+			dphr.nOncePktNum			= GetDBField_UInt(nIndex++);
 
-		strMSOPkg					= GetDBField_String(nIndex++);
-        HexToMap_64(strMSOPkg, dphr.tMgrShowOrderPkgMap, SS_PO_HOST_RUN_MRG_SHOW_ORDER_PKG_NUM);
-		strMSOCls					= GetDBField_String(nIndex++);
-        HexToMap_64(strMSOCls, dphr.tMgrShowOrderClsMap, SS_PO_HOST_RUN_MRG_SHOW_ORDER_CLS_NUM);
+			strMSOPkg					= GetDBField_String(nIndex++);
+			HexToMap_64(strMSOPkg, dphr.tMgrShowOrderPkgMap, SS_PO_HOST_RUN_MRG_SHOW_ORDER_PKG_NUM);
+			strMSOCls					= GetDBField_String(nIndex++);
+			HexToMap_64(strMSOCls, dphr.tMgrShowOrderClsMap, SS_PO_HOST_RUN_MRG_SHOW_ORDER_CLS_NUM);
 
-		dphr.nConnManage			= GetDBField_UInt(nIndex++);
-		dphr.nLogReset				= GetDBField_UInt(nIndex++);
+			dphr.nConnManage			= GetDBField_UInt(nIndex++);
+			dphr.nLogReset				= GetDBField_UInt(nIndex++);
 
-		dphr.nLnxRunOption			= GetDBField_UInt(nIndex++);
-		dphr.nLnxRmLogDay			= GetDBField_UInt(nIndex++);
-		dphr.nLnxLgnConPeriod		= GetDBField_UInt(nIndex++);
-		dphr.nLnxBootChkType		= GetDBField_UInt(nIndex++);
-		dphr.nLnxOncePktNum			= GetDBField_UInt(nIndex++);
-		dphr.nLnxConnManage			= GetDBField_UInt(nIndex++);
+			dphr.nLnxRunOption			= GetDBField_UInt(nIndex++);
+			dphr.nLnxRmLogDay			= GetDBField_UInt(nIndex++);
+			dphr.nLnxLgnConPeriod		= GetDBField_UInt(nIndex++);
+			dphr.nLnxBootChkType		= GetDBField_UInt(nIndex++);
+			dphr.nLnxOncePktNum			= GetDBField_UInt(nIndex++);
+			dphr.nLnxConnManage			= GetDBField_UInt(nIndex++);
         
-        tDBPoHostRunList.push_back(dphr);
-        if(m_nLoadMaxID < UINT32(tDPH.nID))
-			m_nLoadMaxID = tDPH.nID;
-        nReadCnt++;
+			tDBPoHostRunList.push_back(dphr);
+			if(m_nLoadMaxID < UINT32(tDPH.nID))
+				m_nLoadMaxID = tDPH.nID;
+			nReadCnt++;
+		}
     }while(Next());
 	m_nLoadNumber = tDBPoHostRunList.size();
 	WriteLogN("load database : [%s][%u]", m_strDBTName.c_str(), m_nLoadNumber);

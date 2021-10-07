@@ -30,7 +30,7 @@ CDBMgrPoInPtnSPRule*		t_DBMgrPoInPtnSPRule = NULL;
 
 CDBMgrPoInPtnSPRule::CDBMgrPoInPtnSPRule()
 {
-	m_strDBTName = "po_in_ptn_sp_rule";
+	m_strDBTName = SPrintf("%s", "po_in_ptn_sp_rule");
 }
 //---------------------------------------------------------------------------
 

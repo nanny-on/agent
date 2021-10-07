@@ -114,7 +114,11 @@ INT32			CDBMgrLogEvent::LoadDB(TListDBLogEvent& tDBLogEventList)
 
 INT32			CDBMgrLogEvent::InsertLogEvent(DB_LOG_EVENT& dle)
 {
-	m_strQuery = SPrintf("INSERT INTO log_event(used_flag, reg_date, evt_time, evt_ecode, skip_target, "
+	char *pcQuery = (char *)malloc(MAX_BUFF);
+	if(pcQuery == NULL)
+		return ERR_DBMS_INSERT_FAIL;
+	memset(pcQuery, 0, MAX_BUFF);
+	snprintf(pcQuery, MAX_BUFF-1, "INSERT INTO log_event(used_flag, reg_date, evt_time, evt_ecode, skip_target, "
 									"notify_type, notify_id, "
 									"host_id, user_id, reg_svr_id, sync_svr_mode, sync_svr_step, "
 									"subject_type, subject_id, subject_info, "
@@ -128,7 +132,7 @@ INT32			CDBMgrLogEvent::InsertLogEvent(DB_LOG_EVENT& dle)
 									"%u, %u, '%s', "
 									"%u, %u, '%s', "
 									"%u, %u, %u, '%s', "
-									"%u, '%s');",
+									"%u, '%s')",
 									dle.nUsedFlag, dle.nRegDate, dle.nEvtTime, dle.nEvtErrCode, dle.nSkipTarget,
 									dle.nNotifyType, dle.nNotifyID, 
 									dle.nHostID, dle.nUserID, dle.nRegSvrID, dle.nSyncSvrMode, dle.nSyncSvrStep,
@@ -137,8 +141,15 @@ INT32			CDBMgrLogEvent::InsertLogEvent(DB_LOG_EVENT& dle)
 									dle.nObjectType, dle.nObjectCode, dle.nObjectID, dle.strObjectInfo.c_str(), 
 									dle.nOperationType, dle.strEventDescr.c_str());
 
-	if(DBOP_Check(ExecuteQuery(m_strQuery)))
+	pcQuery[MAX_BUFF-1] = 0;
+
+	if(DBOP_Check(ExecuteQuery(pcQuery)))
+	{
+		safe_free(pcQuery);
 		return ERR_DBMS_INSERT_FAIL;
+	}
+
+	safe_free(pcQuery);
 
 	if(dle.nID == 0)
 		dle.nID      = GetLastID();

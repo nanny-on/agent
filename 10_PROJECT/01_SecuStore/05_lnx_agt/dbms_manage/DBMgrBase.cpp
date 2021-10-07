@@ -204,13 +204,16 @@ INT32   CDBMgrBase::DisconnectDB()
 INT32   CDBMgrBase::ExecuteQuery(String strQuery)
 {
 	int nRetVal = 0;
+	char acCmd[8] = {0,};
 	if(m_bConnected == FALSE)
 	{
         if(ConnectDB() != 0)
             return -1;
 	}
-    String strCheck = _strlwr((char*)strQuery.c_str());
-    if(strCheck.find("select ") == 0)
+	strncpy(acCmd, (char *)strQuery.c_str(), 6);
+	acCmd[6] = 0;
+//    String strCheck = _strlwr((char*)strQuery.c_str());
+    if(!_stricmp(acCmd, "select"))
     {
     	nRetVal = Select_Query_ODBC(strQuery);
     }

@@ -51,7 +51,6 @@ INT32			CDBMgrPtnProcFile::LoadDB(TListDBPtnProcFile& tDBPtnProcFileList)
 {
     UINT32 nReadCnt = 0;
     DB_PTN_PROC_FILE data;
-
     INT32 nIndex = 0;
 
 	GetMDMM().strQuery.Format("SELECT id, reg_date, used_mode"
@@ -104,6 +103,7 @@ INT32			CDBMgrPtnProcFile::LoadDB(TListDBPtnProcFile& tDBPtnProcFileList)
 		data.nPtnType				= GetDBField_Int(nIndex++);
 		data.nPtnRisk				= GetDBField_Int(nIndex++);
 
+		data.strFilePath.ConvertWinToUnix();
 
 		tDBPtnProcFileList.push_back(data);
 		if(m_nLoadMaxID < UINT32(data.nID))	m_nLoadMaxID = data.nID;
