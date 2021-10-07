@@ -171,8 +171,8 @@ PDBF_ITEM_RTN		CASIDBFUtil::GetField(PDBF_TABLE_SEARCH pdts, INT32 nIdx)
 	//UINT64 nItemLen = GetFieldLength(pdts, nIdx);
 	UINT64 nItemLenPair = GetBuffLengthAll(pMember->m_tCurDBFILenMap, nIdx);
 	
-	UINT32 nItemLen = LOUINT32(nItemLenPair);
-	UINT32 nItemSPos = HIUINT32(nItemLenPair);
+	UINT32 nItemLen = LOUINT64(nItemLenPair);
+	UINT32 nItemSPos = HIUINT64(nItemLenPair);
 
 	pMember->m_tCurDBFIR._clear();
 
@@ -318,8 +318,8 @@ INT32		CASIDBFUtil::MakeField(PDBF_TABLE_SEARCH pdts, CASIDBFMember* pMember)
 			if(pMember->m_nSelColNum)	nColIdx = pMember->m_tSelColIDArray[nChkIdx];
 
 			UINT64 nItemLenPair = GetBuffLengthAll(pMember->m_tCurDBFILenMap, nColIdx);
-			UINT32 nItemLen = LOUINT32(nItemLenPair);
-			UINT32 nItemSPos = HIUINT32(nItemLenPair);
+			UINT32 nItemLen = LOUINT64(nItemLenPair);
+			UINT32 nItemSPos = HIUINT64(nItemLenPair);
 
 			DBF_ITEM_RTN tDIR;
 			tDIR.nRtnType = GetFieldType(pdts, nColIdx);
@@ -427,5 +427,3 @@ void					CASIDBFUtil::ClearMember()
 	return;
 }
 //---------------------------------------------------------------------
-
-
