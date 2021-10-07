@@ -90,6 +90,8 @@ INT32		CExecuteFileUtil::ExecuteFile(LPVOID lParam)
 		{
 			WriteLogN("[%s] change wptn on file success [%d]..", m_strUtilName.c_str(), nChgWPtn);
 			t_LogicMgrPoInPtnExTrust->CheckPtnLifeCycle();
+			if(t_ThreadPoInPtnFile != NULL)
+				t_ThreadPoInPtnFile->ClearPtnRet();
 			t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);
 		}
 	}
