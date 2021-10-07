@@ -77,7 +77,7 @@ INT32		CASIDBFQUtil::CreateDatabase(CString strDBName, CString strUserID, CStrin
 
 	if(SetER(m_tASIDBFDLLUtil.ASIDBF_CreateDB(strDBFilePath, strUserID, strUserPw)))
 	{
-		WriteLogE("create database fail : [%d][%s]", g_nErrRtn, strDBFilePath);
+		WriteLogE("create database fail : [%d][%s]", g_nErrRtn, (char *)(LPCTSTR)strDBFilePath);
 		m_tASIDBFDLLUtil.FreeDBObject(strDBName);
 		return ASI_DBFQ_ERROR_TYPE_CREATE_DBF_FAIL;
 	}
@@ -137,7 +137,7 @@ INT32		CASIDBFQUtil::OpenDatabase(CString strDBName, CString strUserID, CString 
 	SetER(m_tASIDBFDLLUtil.ASIDBF_OpenDB(strDBFilePath, strUserID, strUserPw, nAccessMode));	
 	if(g_nErrRtn)
 	{		
-		WriteLogE("open database fail : [%d][%s][tc:%d]", g_nErrRtn, strDBFilePath, m_tSQII.nOpenWaitCnt);
+		WriteLogE("open database fail : [%d][%s][tc:%d]", g_nErrRtn, (char *)(LPCTSTR)strDBFilePath, m_tSQII.nOpenWaitCnt);
 		INT32 nLoofCnt = m_tSQII.nOpenWaitCnt;
 		
 		while(g_nErrRtn == ASI_DBF_ERROR_TYPE_OPEN_DB_FAIL_USED_AN_PROC && nLoofCnt)
@@ -402,7 +402,8 @@ PDBF_ITEM_RTN		CASIDBFQUtil::GetField(INT32 nIdx)
 {
 	CASIDBFQMember* pMember = GetMember();
 
-	if(!pMember)	NULL;
+	if(pMember == NULL || pMember->m_pDIRArray == NULL)
+		NULL;
 
 	return &(pMember->m_pDIRArray[nIdx]);
 
@@ -510,7 +511,7 @@ INT32		CASIDBFQUtil::QueryExecute(CString strQuery)
 			UINT32 nAQOpTickCnt = 0;
 			if(SetER(QueryExecuteLine(*begin, nAQOpTickCnt)))
 			{
-				WriteLogE("execute query fail : [%d][%s]", g_nErrRtn, *begin);
+				WriteLogE("execute query fail : [%d][%s]", g_nErrRtn, (char *)(LPCTSTR)*begin);
 				return -1;
 			}
 
@@ -519,7 +520,7 @@ INT32		CASIDBFQUtil::QueryExecute(CString strQuery)
 				UINT32 nEOpTickCnt = GetTickCount();
 				if(nEOpTickCnt - nSOpTickCnt > (UINT32)m_tSQII.nRemainQOpTime)
 				{
-					WriteLogN("dbg_print : [opt:%u(%u) ms][%s]", nEOpTickCnt - nSOpTickCnt, nAQOpTickCnt - nSOpTickCnt, *begin);
+					WriteLogN("dbg_print : [opt:%u(%u) ms][%s]", nEOpTickCnt - nSOpTickCnt, nAQOpTickCnt - nSOpTickCnt, (char *)(LPCTSTR)*begin);
 				}
 			}
 		}
@@ -1443,6 +1444,3 @@ INT32		CASIDBFQUtil::ASIDBF_GetTableItemFPByPKey(LPCTSTR lpTName, UINT64 nKey, P
 	return m_tASIDBFDLLUtil.ASIDBF_GetTableItemFPByPKey(lpTName, nKey, pnFP);
 }
 //---------------------------------------------------------------------
-
-
-
