@@ -23,7 +23,7 @@
 #include "MainDlg.h"
 #include "NannyAgent.h"
 
-//#define   MAKE_DAEMON
+#define   MAKE_DAEMON
 
 #ifdef MAKE_DAEMON
 	int make_daemon(void);

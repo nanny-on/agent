@@ -32,17 +32,24 @@ INT32		CMainDlg::PreCreateSubClass()
 
 	do
 	{
+		t_SystemInfo = new CSystemInfo;
+		if(t_SystemInfo == NULL)
+		{
+			nRetVal = -1;
+			break;
+		}
+
 		t_EnvInfo = new CEnvironment();
 		if(t_EnvInfo == NULL)
 		{
-			nRetVal = -1;
+			nRetVal = -2;
 			break;
 		}
 		
 		t_EnvInfoOp = new CEnvironmentOp();
 		if(t_EnvInfo == NULL)
 		{
-			nRetVal = -2;
+			nRetVal = -3;
 			break;
 		}
 
@@ -427,6 +434,20 @@ INT32		CMainDlg::CreateSubClass()
 		if(t_ThreadPoInPtnFile == NULL)
 		{
 			nRetVal = -61;
+			break;
+		}
+
+		t_ThreadPoInAccFile = new CThreadPoInAccFile();
+		if(t_ThreadPoInAccFile == NULL)
+		{
+			nRetVal = -62;
+			break;
+		}
+
+		t_ThreadPoInSpReq = new CThreadPoInSpReq();
+		if(t_ThreadPoInSpReq == NULL)
+		{
+			nRetVal = -63;
 			break;
 		}
 //      t_ThreadPoInRsBk			= new CThreadPoInRsBk();
@@ -1569,6 +1590,7 @@ INT32		CMainDlg::InitTimerID()
 INT32		CMainDlg::StartSubClass()
 {
 	BOOL bRetVal = TRUE;
+	INT32 nRetVal = 0;
 	pthread_t nThreadId = 0;
 	pthread_t nTimerThreadId = 0;
 	pthread_t nSocketThreadId = 0;
@@ -1669,7 +1691,23 @@ INT32		CMainDlg::StartSubClass()
 		if(bRetVal == FALSE)
 		{
 			WriteLogE("start [po_in_ptn_file] thread result : fail [%d]", errno);
-			return -12;
+			return -13;
+		}
+
+		nThreadId = 0;
+		bRetVal = t_ThreadPoInAccFile->CreateThreadExt("po_in_acc_file", &nThreadId);
+		if(bRetVal == FALSE)
+		{
+			WriteLogE("start [po_in_acc_file] thread result : fail [%d]", errno);
+			return -14;
+		}
+
+		nThreadId = 0;
+		bRetVal = t_ThreadPoInSpReq->CreateThreadExt("po_in_sp_req", &nThreadId);
+		if(bRetVal == FALSE)
+		{
+			WriteLogE("start [po_in_sp_req] thread result : fail [%d]", errno);
+			return -15;
 		}
 /*
 		if(SetER(t_ThreadExecute->CreateThreadExt("execute")) == 0)
@@ -1814,7 +1852,7 @@ INT32		CMainDlg::PreStartTimer()
 	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_FA_OP_CLEAR);		
 	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_POWER);	
 	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_IN_PTN_OP);
-//	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_IN_PTN_SP_RULE);
+	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_IN_PTN_SP_RULE);
 //	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_IN_RS_BK);
 //	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_NC_PTN_OP);
 //	t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_NC_PTN_SP_RULE);
@@ -1913,6 +1951,7 @@ INT32		CMainDlg::StopProcUtil()
 
 INT32		CMainDlg::StopSubClass()
 {
+	INT32 nRetVal = 0;
 	if(t_EnvInfoOp)
 	{
 		t_EnvInfoOp->SetMainContinue();
@@ -1985,8 +2024,18 @@ INT32		CMainDlg::StopSubClass()
 		WriteLogN("stop [chk_hk_noti] thread result : [%d]", g_nErrRtn);
 
 		t_ThreadPoInPtnFile->SetContinue(0);
+		t_ThreadPoInPtnFile->SendExitThreadCmd();
 		SetER(StopThread_Common(t_ThreadPoInPtnFile));
 		WriteLogN("stop [po_in_ptn_file] thread result : [%d]", g_nErrRtn);
+
+		t_ThreadPoInAccFile->SetContinue(0);
+		SetER(StopThread_Common(t_ThreadPoInAccFile));
+		WriteLogN("stop [po_in_acc_file] thread result : [%d]", g_nErrRtn);
+
+		t_ThreadPoInSpReq->SetContinue(0);
+		t_ThreadPoInSpReq->SendExitThreadCmd();
+		SetER(StopThread_Common(t_ThreadPoInSpReq));
+		WriteLogN("stop [po_in_sp_req] thread result : [%d]", g_nErrRtn);
 
 /*
 		t_ThreadExecute->SetContinue(0);
@@ -2215,6 +2264,8 @@ INT32		CMainDlg::DeleteSubClass()
 		SAFE_DELETE(t_ThreadEvtMon);
 		SAFE_DELETE(t_ThreadPoFaOp);
 		SAFE_DELETE(t_ThreadPoInPtnFile);
+		SAFE_DELETE(t_ThreadPoInAccFile);
+		SAFE_DELETE(t_ThreadPoInSpReq);
 //		SAFE_DELETE(t_ThreadPoInRsBk);		//TRACE("delete thread [%s]\n", "InRsBk");
 //		SAFE_DELETE(t_ThreadExecute);		//TRACE("delete thread [%s]\n", "Execute");
 //		SAFE_DELETE(t_ThreadPoNcPtnLo);		//TRACE("delete thread [%s]\n", "FePtnLo");
@@ -2286,6 +2337,9 @@ INT32		CMainDlg::DeleteSubClass()
 
 	{
 		SAFE_DELETE(t_ResInfoDLLUtil);
+	}
+	{
+		SAFE_DELETE(t_SystemInfo);
 	}
 	return 0;
 }

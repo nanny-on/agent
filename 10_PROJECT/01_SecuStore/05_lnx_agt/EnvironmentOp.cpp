@@ -137,8 +137,13 @@ INT32		CEnvironmentOp::ResetEnvPath()
 
 String			CEnvironmentOp::GetComputerName()
 {
-	CSystemInfo tSysInfo;
-	return tSysInfo.GetCompName();
+	String strCompName;
+	if(t_SystemInfo != NULL)
+		strCompName = t_SystemInfo->GetCompName();
+	else
+		strCompName = "";
+
+	return strCompName;
 }
 
 String			CEnvironmentOp::GetRootPath()
