@@ -28,12 +28,21 @@
 *.pdb
 *.o
 *.so
-
+*.a
 #
 #
 #
 # FileName
-
+cp_test
+dbuse
+editconf
+makehash
+reqwhite
+update
+accnotifyd
+fanotifyd
+nannysvc
+pwevt_mon
 #
 #
 #
