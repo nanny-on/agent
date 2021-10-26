@@ -105,6 +105,9 @@ private:
 	TMapPtnRetEx		m_tPtnRetMap;
 	pthread_mutex_t 	m_PtnRetMutex;
 
+	UINT32				m_nTestTime;
+	INT32				m_nTestCount;
+	double				m_fTotalDiffTime;
 	INT32				m_nServerFd;
 	INT32				m_nClientFd;
 	INT32				m_nCheckThread;

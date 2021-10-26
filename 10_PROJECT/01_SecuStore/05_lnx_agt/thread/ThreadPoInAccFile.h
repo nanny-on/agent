@@ -34,6 +34,9 @@ public:
 private:
 	INT32				m_nShmId;
 	char *				m_pString;
+	UINT32				m_nTestTime;
+	INT32				m_nTestCount;
+	double				m_fTotalDiffTime;
 
 private:
 	INT32				InitShm();
@@ -51,9 +54,9 @@ private:
 
 	INT32				SendPolicyInfo(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
 	INT32				SendWhiteClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
-	INT32				SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
+	INT32				SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32& nSendCnt);
 	INT32				SendBlackClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
-	INT32				SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
+	INT32				SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32& nSendCnt);
 	INT32				SendEndPolicy(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol);
 	// Operations
 public:

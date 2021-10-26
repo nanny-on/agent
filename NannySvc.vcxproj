@@ -1223,6 +1223,7 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_timer.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\cp_test\cp_test.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\dbuse\dbuse.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\editconf\editconf.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_dlg.cpp" />
@@ -1243,6 +1244,9 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\update\mz_zip.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\update\update.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\update\zip.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\07_test\exe_test_pgm\exe_test_pgm.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\07_test\make_test_pgm\make_test_pgm.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\07_test\write_test_pgm\write_test_pgm.cpp" />
     <ClCompile Include="dbms_manage\env\DBMgrEnvSocket.cpp" />
     <ClCompile Include="dbms_manage\info\DBMgrInfoProcReputation.cpp" />
     <ClCompile Include="dbms_manage\po_fa\DBMgrPoFaDelFileAfterBoot.cpp" />
@@ -4070,6 +4074,11 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <None Include="01_SDK\01_DLL\04_dbms\file_dbms\dll\01_dbf\enc_util\seed\seedx.tab" />
     <None Include="01_SDK\01_GLB_W32\Makefile" />
     <None Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\06_util\cp_test\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\07_test\exe_test_pgm\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\07_test\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\07_test\make_test_pgm\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\07_test\write_test_pgm\Makefile" />
     <None Include="10_PROJECT\Makefile" />
     <None Include="dbms_manage\info\Makefile" />
     <None Include="dbms_manage\po_in\rs\Makefile" />

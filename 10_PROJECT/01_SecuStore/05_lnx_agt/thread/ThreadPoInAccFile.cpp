@@ -32,6 +32,9 @@ CThreadPoInAccFile::CThreadPoInAccFile()
 {
 	m_nShmId = -1;
 	m_pString = NULL;
+	m_nTestTime = 0;
+	m_nTestCount = 0;
+	m_fTotalDiffTime = 0;
 }
 
 CThreadPoInAccFile::~CThreadPoInAccFile()
@@ -100,7 +103,7 @@ INT32	CThreadPoInAccFile::IsInitLogic()
 	INT32 nRetVal = -1;
 	for(i=0; i<30; i++)
 	{
-		if(t_LogicMgrPtnGBO->IsInitLogic() && t_LogicMgrPtnGWO->IsInitLogic())
+		if(t_LogicMgrPtnGBO->IsInitLogic() || t_LogicMgrPtnGWO->IsInitLogic())
 		{
 			nRetVal = 0;
 			break;
@@ -239,6 +242,7 @@ INT32 CThreadPoInAccFile::Run()
 	pthread_t tid = 0;
 	PASI_CHK_PTN_FILE pChkPtnFile = NULL;
 
+	Sleep(3000);
 	tid = syscall(SYS_gettid);
 	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
 	if(nRetVal < 0)
@@ -258,6 +262,7 @@ INT32 CThreadPoInAccFile::Run()
 	if(nRetVal == 0)
 	{
 		m_nPause = 0;
+		SendPolicy(AS_SEND_POLICY_ALL);
 	}
 	else
 	{
@@ -286,6 +291,7 @@ INT32 CThreadPoInAccFile::Run()
 			if(nRetVal == 0)
 			{
 				m_nPause = 0;
+				SendPolicy(AS_SEND_POLICY_ALL);
 			}
 			else
 			{
@@ -403,10 +409,11 @@ INT32	CThreadPoInAccFile::SendWhiteClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY
 	return 0;
 }
 
-INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
+	INT32 nSend = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
 	TListFileHashInfo tFileHashList;
 	if(nClientFd < 0 || pAccNotiPol == NULL)
@@ -430,7 +437,7 @@ INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 	begin = tFileHashList.begin();	end = tFileHashList.end();
 	for(begin; begin != end; begin++)
 	{
-		if(!_strnicmp(begin->acFullPath, "/bin/", 5))
+		if(!_strnicmp(begin->acFullPath, "/bin/", 5) || strstr(begin->acFullPath, "_file_") != NULL)
 		{
 			strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
 			pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
@@ -442,9 +449,11 @@ INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 				tFileHashList.clear();
 				return -2;
 			}
+			nSend++;
 		}
 	}
 	tFileHashList.clear();
+	nSendCount = nSend++;
 	return 0;
 }
 
@@ -469,10 +478,11 @@ INT32	CThreadPoInAccFile::SendBlackClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY
 }
 
 
-INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
+	INT32 nSend = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
 	TListFileHashInfo tFileHashList;
 	if(nClientFd < 0 || pAccNotiPol == NULL)
@@ -496,7 +506,7 @@ INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 	begin = tFileHashList.begin();	end = tFileHashList.end();
 	for(begin; begin != end; begin++)
 	{
-		if(!_strnicmp(begin->acFullPath, "/bin/", 5))
+		if(!_strnicmp(begin->acFullPath, "/bin/", 5) || strstr(begin->acFullPath, "_file_") != NULL)
 		{
 			strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
 			pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
@@ -508,9 +518,11 @@ INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 				tFileHashList.clear();
 				return -2;
 			}
+			nSend++;
 		}
 	}
 	tFileHashList.clear();
+	nSendCount = nSend;
 	return 0;
 }
 
@@ -542,6 +554,7 @@ INT32	CThreadPoInAccFile::SendPolicy(INT32 nSendFlag)
 	INT32 nState = 0;
 	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
 	INT32 nClientLen = 0;
+	INT32 nSendCnt = 0;
 	struct sockaddr_un stClientAddr;
 	char acSockPath[MAX_FILE_NAME] = {0,};
 
@@ -591,6 +604,8 @@ INT32	CThreadPoInAccFile::SendPolicy(INT32 nSendFlag)
 				nRetVal -= 10;
 				break;
 			}
+			else
+				WriteLogN("success to send policy info");
 		}
 		if(nSendFlag & AS_SEND_WHITE_FILE)
 		{
@@ -601,13 +616,16 @@ INT32	CThreadPoInAccFile::SendPolicy(INT32 nSendFlag)
 				nRetVal -= 20;
 				break;
 			}
-			nRetVal = SendWhiteFile(nClientFd, pAccNotiPol);
+			nSendCnt = 0;
+			nRetVal = SendWhiteFile(nClientFd, pAccNotiPol, nSendCnt);
 			if (nRetVal < 0)
 			{
 				WriteLogE("[SendPolicy] fail to send white file %d (%d)", nRetVal, errno);
 				nRetVal -= 20;
 				break;
 			}
+			else
+				WriteLogN("success to send white file %d", nSendCnt);
 		}
 		if(nSendFlag & AS_SEND_BLACK_FILE)
 		{
@@ -618,13 +636,16 @@ INT32	CThreadPoInAccFile::SendPolicy(INT32 nSendFlag)
 				nRetVal -= 20;
 				break;
 			}
-			nRetVal = SendBlackFile(nClientFd, pAccNotiPol);
+			nSendCnt = 0;
+			nRetVal = SendBlackFile(nClientFd, pAccNotiPol, nSendCnt);
 			if (nRetVal < 0)
 			{
 				WriteLogE("[SendPolicy] fail to send black file %d (%d)", nRetVal, errno);
 				nRetVal -= 30;
 				break;
 			}
+			else
+				WriteLogN("success to send black file %d", nSendCnt);
 		}
 		nRetVal = SendEndPolicy(nClientFd, pAccNotiPol);
 		if (nRetVal < 0)
@@ -681,7 +702,11 @@ INT32		CThreadPoInAccFile::CheckShmEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 	INT32 nRetVal = 0;
 	INT32 nAcVal = RET_NONE;
 	INT32 nSize = sizeof(ASI_CHK_FILE_PROC);
-
+#ifdef _PERP_TEST_LOG
+	BOOL bIsTestPgm = FALSE;
+	double fDiffTime = 0;
+	struct timeval stStartTime;
+#endif
 	if(pChkPtnFile == NULL)
 	{
 		return -1;
@@ -700,7 +725,36 @@ INT32		CThreadPoInAccFile::CheckShmEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 			nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
 			if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 			{
+#ifdef _PERP_TEST_LOG
+				if(!_stricmp(pChkPtnFile->stCHKFILE.stProcInfo.acFile, "cp_test"))
+				{
+					bIsTestPgm = TRUE;
+					gettimeofday(&stStartTime, NULL);
+				}
+#endif
 				SetLogAccEvent(pChkPtnFile);
+#ifdef _PERP_TEST_LOG
+				if(bIsTestPgm == TRUE)
+				{
+					fDiffTime = diff_time(stStartTime);
+					UINT32 nTime = (UINT32)time(NULL);
+					if(nTime - m_nTestTime > 30)
+					{
+						m_nTestCount = 0;
+						m_fTotalDiffTime = 0;
+					}
+					else
+						m_nTestCount++;
+					m_nTestTime = nTime;
+					m_fTotalDiffTime += fDiffTime;
+					WritePerfTest4Log("[%03d]\ttest the interval time for detection of authorized file [%s] [detection time : %.02f ms]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, fDiffTime/1000);
+					if(m_nTestCount == 19)
+					{
+						fDiffTime = m_fTotalDiffTime/20;
+						WritePerfTest4Log("[total]\ttest the interval time for detection of authorized file [total : %d files] [average time : %.02f ms]", m_nTestCount+1, fDiffTime/1000);
+					}
+				}
+#endif /*_PERP_TEST_LOG*/
 			}
 		}
 		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_REQ_ACCESS_INFO)

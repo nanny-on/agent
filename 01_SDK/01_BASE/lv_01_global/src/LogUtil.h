@@ -32,4 +32,9 @@ void	Encrypt_Log(UINT32	key, PBYTE SrcData,	INT32 SrcLen);
 void	Decript_Log(UINT32	key, PBYTE SrcData,	INT32 SrcLen);
 void	WriteLog_Enc(LPTSTR lpLog, FILE* fp);
 void	SetLogSKey(UINT32 nSKey);
+
+void	WritePerfTest1Log(char *fmt,...);
+void	WritePerfTest2Log(char *fmt,...);
+void	WritePerfTest3Log(char *fmt,...);
+void	WritePerfTest4Log(char *fmt,...);
 #endif

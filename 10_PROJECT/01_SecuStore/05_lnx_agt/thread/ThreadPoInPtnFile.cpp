@@ -34,6 +34,9 @@ CThreadPoInPtnFile::CThreadPoInPtnFile()
 	m_nPtnRetCount = 0;
 	m_nServerFd = -1;
 	m_nClientFd = -1;
+	m_nTestTime = 0;
+	m_fTotalDiffTime = 0;
+	m_nTestCount = 0;
 	m_nCheckThread = ASI_DISCONNECT_STATE;
 	pthread_mutex_init(&m_SockMutex, NULL);
 	pthread_mutex_init(&m_PtnRetMutex, NULL);
@@ -129,7 +132,7 @@ INT32	CThreadPoInPtnFile::IsInitLogic()
 	INT32 nRetVal = -1;
 	for(i=0; i<30; i++)
 	{
-		if(t_LogicMgrPtnGBO->IsInitLogic() && t_LogicMgrPtnGWO->IsInitLogic())
+		if(t_LogicMgrPtnGBO->IsInitLogic() || t_LogicMgrPtnGWO->IsInitLogic())
 		{
 			nRetVal = 0;
 			break;
@@ -949,7 +952,6 @@ INT32		CThreadPoInPtnFile::ChkInPtn(char *pcFeKey, INT32& nBlockMode, INT32& nIs
 	UINT32 nWLUsedMode = STATUS_USED_MODE_OFF;
 	UINT32 nPtnRisk = PTN_FB_PTN_RISK_UNKNOW;
 	INT32 i;
-
 	if(t_MMPPGWO == NULL && t_MMPPGBO == NULL)
 		return 0;
 
@@ -962,12 +964,27 @@ INT32		CThreadPoInPtnFile::ChkInPtn(char *pcFeKey, INT32& nBlockMode, INT32& nIs
 	}
 	if(nOpUsedMode == STATUS_USED_MODE_OFF)
 		return 0;
+	PDB_PO_IN_PTN_WL pWlPolicy = (PDB_PO_IN_PTN_WL)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_WL);
+	if(pWlPolicy)
+	{
+		nWLID = pWlPolicy->tDPH.nID;
+//		if(t_ManagePoInPtnWL->IsValidPtnFile(nWLID) && t_LogicMgrPtnGWO->IsInitLogic())
+		if(t_LogicMgrPtnGWO->IsInitLogic())
+		{
+			nWLUsedMode = pWlPolicy->tDPH.nUsedMode;
+		}
+		else
+		{
+			nWLUsedMode = STATUS_USED_MODE_OFF;
+		}
+	}
 
 	PDB_PO_IN_PTN_BL pBlPolicy = (PDB_PO_IN_PTN_BL)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_BL);
 	if(pBlPolicy)
 	{
 		nBLID = pBlPolicy->tDPH.nID;
-		if(t_ManagePoInPtnBL->IsValidPtnFile(nBLID) && t_LogicMgrPtnGBO->IsInitLogic())
+//		if(t_ManagePoInPtnBL->IsValidPtnFile(nBLID) && t_LogicMgrPtnGBO->IsInitLogic())
+		if(t_LogicMgrPtnGBO->IsInitLogic())
 		{
 			nBLUsedMode = pBlPolicy->tDPH.nUsedMode;
 		}
@@ -977,19 +994,6 @@ INT32		CThreadPoInPtnFile::ChkInPtn(char *pcFeKey, INT32& nBlockMode, INT32& nIs
 		}
 	}
 
-	PDB_PO_IN_PTN_WL pWlPolicy = (PDB_PO_IN_PTN_WL)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_WL);
-	if(pWlPolicy)
-	{
-		nWLID = pWlPolicy->tDPH.nID;
-		if(t_ManagePoInPtnWL->IsValidPtnFile(nWLID) && t_LogicMgrPtnGWO->IsInitLogic())
-		{
-			nWLUsedMode = pWlPolicy->tDPH.nUsedMode;
-		}
-		else
-		{
-			nWLUsedMode = STATUS_USED_MODE_OFF;
-		}
-	}
 
 	if(nBLUsedMode == STATUS_USED_MODE_OFF && nWLUsedMode == STATUS_USED_MODE_OFF)
 		return 0;
@@ -1001,37 +1005,37 @@ INT32		CThreadPoInPtnFile::ChkInPtn(char *pcFeKey, INT32& nBlockMode, INT32& nIs
 	{
 		if(nBLUsedMode == STATUS_USED_MODE_OFF)
 			return 0;
-
 		nPtnRisk = PTN_FB_PTN_RISK_UNKNOW;
-		if(t_MMPPGWO && nWLUsedMode != STATUS_USED_MODE_OFF)
+
+
+		nBLCount = t_MMPPGBO->t_ManagePtnProcFile->Count();
+		if(nBLCount != 0 && t_MMPPGBO->t_ManagePtnProcFile->FindSKeyID(pcFeKey))
 		{
-			nWLCount = t_MMPPGWO->t_ManagePtnProcFile->Count();
-			if(nWLCount != 0 && t_MMPPGWO->t_ManagePtnProcFile->FindSKeyID(pcFeKey))
-			{
-				nPtnRisk = PTN_FB_PTN_RISK_WHITE;
-			}
+			nPtnRisk = PTN_FB_PTN_RISK_BLACK;
 		}
 
 		if(t_MMPPGBO && nPtnRisk == PTN_FB_PTN_RISK_UNKNOW)
 		{
-			nBLCount = t_MMPPGBO->t_ManagePtnProcFile->Count();
-			if(nBLCount != 0 && t_MMPPGBO->t_ManagePtnProcFile->FindSKeyID(pcFeKey))
+			if(t_MMPPGWO && nWLUsedMode != STATUS_USED_MODE_OFF)
 			{
-				nPtnRisk = PTN_FB_PTN_RISK_BLACK;
+				nWLCount = t_MMPPGWO->t_ManagePtnProcFile->Count();
+				if(nWLCount != 0 && t_MMPPGWO->t_ManagePtnProcFile->FindSKeyID(pcFeKey))
+				{
+					nPtnRisk = PTN_FB_PTN_RISK_WHITE;
+				}
 			}
 		}
 
 		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
-
-		if(nPtnRisk == PTN_FB_PTN_RISK_WHITE)
-		{
-			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + nWLID;
-			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
-		}
-		else if(nPtnRisk == PTN_FB_PTN_RISK_BLACK)
+		if(nPtnRisk == PTN_FB_PTN_RISK_BLACK)
 		{
 			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL + nBLID;
 			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		}
+		else if(nPtnRisk == PTN_FB_PTN_RISK_WHITE)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + nWLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
 		}
 		else
 		{
@@ -1109,7 +1113,7 @@ INT32	CThreadPoInPtnFile::SetLogExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 		pSecuLog->strObjectPath	= pChkPtnFile->stCHKFILE.stFileInfo.acPath;
 		pSecuLog->strObjectName	= pChkPtnFile->stCHKFILE.stFileInfo.acFile;
 		pSecuLog->strExtInfo = pChkPtnFile->stAWWE.acWhiteHash;
-
+		
 		pSecuLog->nOpType = LOG_PROCESS_ACCESS_DENIED;
 		pSecuLog->nObjectType = DETECT_MODE_ACL;
 		if(pChkPtnFile->stCHKFILE.stRetInfo.nIsWarning == 1)
@@ -1133,15 +1137,32 @@ INT32	CThreadPoInPtnFile::SetLogExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 
 VOID	CThreadPoInPtnFile::SetLogCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
-	INT32 nRetVal = 0;
+	INT32 i, nRetVal = 0;
+	DWORD dwFileType = AS_INVALID_FILE;
 	if(pChkPtnFile == NULL)
 	{
 		return;
 	}
 	if(t_LogicMgrSiteFile != NULL)
 	{
-		strncpy(pChkPtnFile->stAWWE.acWhiteHash, pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash, SHA512_BLOCK_SIZE+1);
-		pChkPtnFile->stAWWE.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		if(pChkPtnFile->stAWWE.acWhiteHash[0] == 0)
+		{
+			for(i=0; i<3; i++)
+			{
+				nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
+				if(nRetVal == 0 || dwFileType != AS_INVALID_FILE)
+				{
+					break;
+				}
+				Sleep(300);
+			}
+		}
+		if(pChkPtnFile->stAWWE.acWhiteHash[0] == 0)
+		{
+			return;
+		}
+		strncpy(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash, pChkPtnFile->stAWWE.acWhiteHash, SHA512_BLOCK_SIZE+1);
+		pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
 		t_LogicMgrSiteFile->CheckSiteCreateFile(&pChkPtnFile->stCHKFILE);
 	}
 }
@@ -1214,8 +1235,6 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent2(PASI_CHK_PTN_FILE pChkPtnFile, INT32
 	INT32 i, nAcVal = RET_NONE;
 	String strPath;
 	TMapStrIDItor find;
-	
-
 	do{
 		strncpy(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath, "/usr/local/test", MAX_PATH-1);
 		pChkPtnFile->stCHKFILE.stProcInfo.acFullPath[MAX_PATH-1] = 0;
@@ -1441,20 +1460,20 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, 0, 0, 0);
 			break;
 		}
-
+/*
 		if(GetRetMapData(pChkPtnFile) == 0)
 		{
 			nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
 			break;
 		}
-
+*/
 		dwFileType = 0;
 		nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
 		if(nRetVal < 0 || dwFileType == AS_INVALID_FILE)
 		{
 			nAcVal = RET_NONE;
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, 0, 0, 0);
-			SetRetMapData(pChkPtnFile);
+//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 
@@ -1470,7 +1489,7 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 					nAcVal = RET_DENY;
 			}
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-			SetRetMapData(pChkPtnFile);
+//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 
@@ -1486,16 +1505,15 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 					nAcVal = RET_DENY;
 			}
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-			SetRetMapData(pChkPtnFile);
+//			SetRetMapData(pChkPtnFile);
 			break;
 		}
-
 		nRetVal = ChkInPtn(pChkPtnFile->stAWWE.acWhiteHash, nBlockMode, nIsWarning, nPolicyType);
 		if(nRetVal != 1)
 		{
 			nAcVal = RET_NONE;
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, RET_NONE, 0, 0, 0);
-			SetRetMapData(pChkPtnFile);
+//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 		nAcVal = RET_NONE;
@@ -1509,7 +1527,7 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 			}
 		}
 		SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-		SetRetMapData(pChkPtnFile);
+//		SetRetMapData(pChkPtnFile);
 	}while(FALSE);
 
 	return nAcVal;
@@ -1539,6 +1557,11 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 	INT32 nAcVal = RET_NONE;
 	DWORD dwFileType = AS_INVALID_FILE;
 	INT32 nSize = sizeof(ASI_CHK_FILE_PROC);
+#ifdef _PERP_TEST_LOG
+	BOOL bIsTestPgm = FALSE;
+	double fDiffTime = 0;
+	struct timeval stStartTime;
+#endif
 	if(pChkPtnFile == NULL || nClientFd == -1)
 	{
 		return -1;
@@ -1564,7 +1587,20 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 		}
 		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_CHK_WHITE)
 		{
+#ifdef _PERP_TEST_LOG
+			if(!_stricmp(pChkPtnFile->stCHKFILE.stProcInfo.acFile, "exe_test_pgm"))
+			{
+				bIsTestPgm = TRUE;
+				gettimeofday(&stStartTime, NULL);
+			}
+#endif
 			nAcVal = AnalyzeExecEvent(pChkPtnFile);
+#ifdef _PERP_TEST_LOG
+			if(bIsTestPgm == TRUE)
+			{
+				fDiffTime = diff_time(stStartTime);
+			}
+#endif
 			nRetVal = SockWrite(nClientFd, (PVOID)&pChkPtnFile->stCHKFILE, nSize);
 			if(nRetVal != 0)
 			{
@@ -1575,6 +1611,43 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 			if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 			{
 				SetLogExecEvent(pChkPtnFile);
+#ifdef _PERP_TEST_LOG
+				if(bIsTestPgm == TRUE)
+				{
+					UINT32 nTime = (UINT32)time(NULL);
+					if(nTime - m_nTestTime > 30)
+					{
+						m_nTestCount = 0;
+						m_fTotalDiffTime = 0;
+					}
+					else
+						m_nTestCount++;
+					m_nTestTime = nTime;
+					WritePerfTest1Log("[%03d]\ttest for detection of unauthorized file [%s]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath);
+					m_fTotalDiffTime += fDiffTime;
+					WritePerfTest3Log("[%03d]\ttest the interval time for detection of unauthorized file [%s] [detection time : %.02f ms]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, fDiffTime/1000);
+					if(m_nTestCount == 19)
+					{
+						fDiffTime = m_fTotalDiffTime/20;
+						WritePerfTest3Log("[total]\ttest the interval time for detection of unauthorized file [total : %d files] [average time : %.02f ms]", m_nTestCount+1, fDiffTime/1000);
+					}
+				}
+#endif /*_PERP_TEST_LOG*/
+			}
+			else
+			{
+#ifdef _PERP_TEST_LOG
+				if(bIsTestPgm == TRUE)
+				{
+					UINT32 nTime = (UINT32)time(NULL);
+					if(nTime - m_nTestTime > 30)
+						m_nTestCount = 0;
+					else
+						m_nTestCount++;
+					m_nTestTime = nTime;
+					WritePerfTest2Log("[%03d]\ttest for detection of authorized file [%s]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath);
+				}
+#endif /*_PERP_TEST_LOG*/
 			}
 		}
 		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_CREATE_FILE)

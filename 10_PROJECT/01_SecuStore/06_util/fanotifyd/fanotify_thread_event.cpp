@@ -307,12 +307,16 @@ INT32	CThreadFaNotifyEvent::InitNotifyEvent(INT32 &nNotifyFd, INT32 &nClientFd, 
 	INT32 nCFd = -1;
 	CFaNotifyDlg* t_NotifyDlg = (CFaNotifyDlg *)m_pNotifyWnd;
 	do{
+		if(t_NotifyDlg != NULL)
+			t_NotifyDlg->WriteLogN("CheckWhitePatternFile");
 		nRetVal = CheckWhitePatternFile();
 		if(nRetVal < 0)
 		{
 			nRetVal -= 10;
 			break;
 		}
+		if(t_NotifyDlg != NULL)
+			t_NotifyDlg->WriteLogN("InitSockEnv");
 
 		nRetVal = InitSockEnv(nCFd);
 		if(nRetVal < 0 || nCFd == -1)
@@ -323,8 +327,13 @@ INT32	CThreadFaNotifyEvent::InitNotifyEvent(INT32 &nNotifyFd, INT32 &nClientFd, 
 			break;
 		}
 
+		if(t_NotifyDlg != NULL)
+			t_NotifyDlg->WriteLogN("nTestMode : %d", nTestMode);
 		if(nTestMode == 0)
 		{
+			if(t_NotifyDlg != NULL)
+				t_NotifyDlg->WriteLogN("InitFaNotifyFd");
+
 			if(InitFaNotifyFd(nNFd) == FALSE)
 			{
 				if(t_NotifyDlg != NULL)
@@ -333,6 +342,9 @@ INT32	CThreadFaNotifyEvent::InitNotifyEvent(INT32 &nNotifyFd, INT32 &nClientFd, 
 				UninitSockEnv();
 				break;
 			}
+			if(t_NotifyDlg != NULL)
+				t_NotifyDlg->WriteLogN("AddWatchFaNotify");
+
 
 			nRetVal = AddWatchFaNotify(1, ASI_FANOTIFY_PATH);
 			if(nRetVal < 0)
@@ -342,6 +354,8 @@ INT32	CThreadFaNotifyEvent::InitNotifyEvent(INT32 &nNotifyFd, INT32 &nClientFd, 
 				CloseFaNotifyFd();
 				break;
 			}
+			if(t_NotifyDlg != NULL)
+				t_NotifyDlg->WriteLogN("after AddWatchFaNotify");
 			nNotifyFd = nNFd;
 		}
 		nClientFd = nCFd;
@@ -387,7 +401,6 @@ INT32 CThreadFaNotifyEvent::Run()
 	char *pcBuffer = NULL;
 	PASI_CHK_FILE_PROC pChkFileProc;
 	CFaNotifyDlg* t_NotifyDlg = (CFaNotifyDlg *)m_pNotifyWnd;
-
 	pid_t tid = syscall(SYS_gettid);
 	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
 	if(nRetVal < 0)
@@ -419,6 +432,11 @@ INT32 CThreadFaNotifyEvent::Run()
 	if(nRetVal == 0)
 	{
 		m_nPause = 0;
+	}
+	else
+	{
+		if(t_NotifyDlg != NULL)
+			t_NotifyDlg->WriteLogE("fail to init notify event : [%s][%d][%d]", m_strThreadName.c_str(), nRetVal, errno);
 	}
 
 	m_nRunFlag = 1;

@@ -628,7 +628,6 @@ TEMPLATE	UINT32	CManageBase<_T>::GetItemIDList(TListID& tListID)
 		tListID.push_back(m_pMapItorBegin->second.nID);
 	}
 	nRtn = (UINT32)tListID.size();
-
 	pthread_mutex_unlock (&m_mutex);
 	return nRtn;
 }

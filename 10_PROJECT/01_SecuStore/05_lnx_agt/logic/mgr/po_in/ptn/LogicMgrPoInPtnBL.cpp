@@ -174,7 +174,7 @@ INT32		CLogicMgrPoInPtnBL::ApplyPolicy()
 					return 0;
 				}
 				if(t_ThreadPoInAccFile != NULL)
-					t_ThreadPoInAccFile->SendPolicy(AS_SEND_BLACK_FILE);
+					t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
 				t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);
 			}
 		}
@@ -243,6 +243,10 @@ INT32		CLogicMgrPoInPtnBL::LoadPtn()
 					WriteLogE("[%s] can not reload gbo ptn file  : [%s]", m_strLogicName.c_str(), pdata->tDPFI.strSaveName.c_str());
 					return 0;
 				}
+/*				
+				if(t_ThreadPoInAccFile != NULL)
+					t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
+*/
 			}
 		}
 	}
@@ -252,6 +256,7 @@ INT32		CLogicMgrPoInPtnBL::LoadPtn()
 
 INT32		CLogicMgrPoInPtnBL::AddDpDownInfo()
 {
+	char acPtnFile[MAX_PATH] = {0,};
 	PDB_PO_SVR_INFO_UDT pdata_us = (PDB_PO_SVR_INFO_UDT)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_SVR_INFO_UDT);
 	if(!pdata_us)
 	{
@@ -298,14 +303,18 @@ INT32		CLogicMgrPoInPtnBL::AddDpDownInfo()
 		{	
 			strncpy(tAFI.szFileName, pdata->tDPFI.strSaveName.c_str(), MAX_PATH-1);
 			strncpy(tAFI.szFileHash, pdata->tDPFI.strFileHash.c_str(), MAX_PATH-1);
-		}	
-
-		if(t_ManageFileDown->IsExistDnInfo(tAFI.nItemType, tAFI.nPolicyID, tAFI.nItemID))
-		{
-			WriteLogN("already exists in ptn bl download : [%d][%d][%s]:[%s]", tAFI.nID, tAFI.nItemID, tAFI.szFileName, pdata_us->strDataSvrInfoList.c_str());
-			return 0;
 		}
 
+		snprintf(acPtnFile, MAX_PATH-1, "%s/%s/%s", t_EnvInfo->m_strRootPath.c_str(), STR_WENG_PTN_FILE, tAFI.szFileName);
+
+		if(is_file(acPtnFile) == REG_FILE)
+		{
+			if(t_ManageFileDown->IsExistDnInfo(tAFI.nItemType, tAFI.nPolicyID, tAFI.nItemID))
+			{
+				WriteLogN("already exists in ptn bl download : [%d][%d][%s]:[%s]", tAFI.nID, tAFI.nItemID, tAFI.szFileName, acPtnFile);
+				return 0;
+			}
+		}
 		WriteLogN("start in ptn bl download : [%d][%d][%s]:[%s]", tAFI.nID, tAFI.nItemID, tAFI.szFileName, pdata_us->strDataSvrInfoList.c_str());
 		SetDLSvrInfo(ASIFDL_DL_SVR_TYPE_SITE, pdata_us->strDataSvrInfoList.c_str());
 		AddDLInfo(&tAFI);

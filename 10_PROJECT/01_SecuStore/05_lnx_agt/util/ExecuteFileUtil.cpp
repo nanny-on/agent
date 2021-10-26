@@ -838,6 +838,9 @@ INT32		CExecuteFileUtil::ExecuteFile_WPtnGBO(INT32& nChgWPtn)
 				break;
 			}
 
+			if(t_ThreadPoInAccFile != NULL)
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
+
 			nChgWPtn = 1;
 			unlink((char *)strDwName.c_str());
 		} while (FALSE);		
@@ -911,6 +914,8 @@ INT32		CExecuteFileUtil::ExecuteFile_WPtnGWO(INT32& nChgWPtn)
 				WriteLogE("[%s] can not reload gwo ptn file  : [%s]", m_strUtilName.c_str(), strSvName.c_str());
 				break;
 			}
+			if(t_ThreadPoInAccFile != NULL)
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
 
 			nChgWPtn = 1;
 			unlink((char *)strDwName.c_str());

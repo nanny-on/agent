@@ -115,7 +115,7 @@ PDB_SITE_FILE			CManageSiteFile::FindSiteFileKey(String strName)
 
 INT32					CManageSiteFile::ApplySiteFile(DB_SITE_FILE& dsf)
 {
-	if(FindItem(dsf.nID))
+	if(dsf.nID != 0 && FindItem(dsf.nID))
 	{
 		return EditSiteFile(dsf);
 	}

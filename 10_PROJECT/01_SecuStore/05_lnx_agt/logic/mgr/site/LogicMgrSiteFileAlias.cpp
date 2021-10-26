@@ -213,12 +213,6 @@ void		CLogicMgrSiteFileAlias::CheckSiteFileAlias(PDB_SITE_FILE_ALIAS pdata_src)
 
 void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 {
-	{
-		WriteLogN("[%s] remain site file alias to file : fp[%s]:fn[%s]", 
-					m_strLogicName.c_str(),
-					data.strFilePath.c_str(), data.strFileName.c_str());
-	}
-		
 //	INT32 nOldItem = data.nID;
 	t_ManageSiteFileAlias->ApplySiteFileAlias(data);
 	
@@ -234,6 +228,7 @@ void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 */
 		do 
 		{
+/*
 			{
 				PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
 				if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
@@ -243,18 +238,19 @@ void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 					break;
 				}
 			}
-
+*/
 			{
 				PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
 				if(pdata && 
 					(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
 					((data.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
 				{
+					WriteLogN("[%s] remain site alias file to server : fp[%s/%s] key[%s]", m_strLogicName.c_str(), data.strFilePath.c_str(), data.strFileName.c_str(), data.strFeKey.c_str());
 					SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
 					break;
 				}
 			}
-
+/*
 			{
 				PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
 				if(pdata && 
@@ -265,6 +261,7 @@ void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 					break;
 				}
 			}
+*/
 		} while (FALSE);
 
 		SendToken.Clear();
@@ -288,25 +285,36 @@ void		CLogicMgrSiteFileAlias::SendPkt_Sync(INT32 nOnceMaxNum)
 
 	INT32 nOnceNum = nOnceMaxNum;
 	INT32 nSendNum = 0;
+	PDB_SITE_FILE_ALIAS pDsfa = NULL;
+	INT32 nListCount = 0;
+	nListCount = tSendList.size();
+	if(nListCount < 1)
+		return;
 
 	TListPVOIDItor begin, end;
 	begin = tSendList.begin();	end = tSendList.end();
-
-	while(nSendNum < tSendList.size())
+	while(nSendNum < nListCount)
 	{
-		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
+		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
 
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
-			t_ManageSiteFileAlias->SetPkt((PDB_SITE_FILE_ALIAS)(*begin), SendToken);
-
-			nSendNum += 1;
-			nOnceNum -= 1;
+			pDsfa = (PDB_SITE_FILE_ALIAS)(*begin);
+			if(pDsfa != NULL)
+			{
+				t_ManageSiteFileAlias->SetPkt(pDsfa, SendToken);
+				nSendNum += 1;
+				nOnceNum -= 1;
+			}
 		}
-		SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		if(nSendNum != 0)
+		{
+			SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
+			SendToken.Clear();
+			WriteLogN("[%s] send to sync site alias file : send[%d]", m_strLogicName.c_str(), nSendNum);
+		}
 	}
 	return;
 }
@@ -319,25 +327,40 @@ void		CLogicMgrSiteFileAlias::SendPkt_ReSend(INT32 nOnceMaxNum)
 
 	INT32 nOnceNum = nOnceMaxNum;
 	INT32 nSendNum = 0;
-
+	INT32 nListCount = 0;
 	TListIDItor begin, end;
-	begin = tIDList.begin();	end = tIDList.end();
 
-	while(nSendNum < tIDList.size())
+	nListCount = tIDList.size();
+	begin = tIDList.begin();	end = tIDList.end();
+	if(*begin == 0)
 	{
-		nOnceNum = (((tIDList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tIDList.size() - nSendNum));
+		nListCount--;
+	}
+	if(nListCount < 1)
+		return;
+
+	while(nSendNum < nListCount)
+	{
+		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
 
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
-			t_ManageSiteFileAlias->SetPkt((*begin), SendToken);
-
-			nSendNum += 1;
-			nOnceNum -= 1;
+			if(*begin != 0)
+			{
+				t_ManageSiteFileAlias->SetPkt(*begin, SendToken);
+				nSendNum += 1;
+				nOnceNum -= 1;
+			}
 		}
-		SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		if(nSendNum != 0)
+		{
+			SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
+			SendToken.Clear();
+			WriteLogN("[%s] resend to site alias file : send[%d]", m_strLogicName.c_str(), nSendNum);
+		}
 	}
+
 	return;
 }

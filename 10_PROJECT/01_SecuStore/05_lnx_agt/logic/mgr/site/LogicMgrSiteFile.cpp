@@ -186,7 +186,7 @@ void		CLogicMgrSiteFile::CheckSiteFile(String strFilePath)
 
 void		CLogicMgrSiteFile::CheckSiteFile(PDB_SITE_FILE pdsf_src)
 {
-	PDB_SITE_FILE pDsf = NULL;
+	DB_SITE_FILE stDsf;
 	PDB_SITE_FILE pFindDsf = NULL;
 	char acPath[MAX_PATH] = {0, }; 
 	INT32 nSize = sizeof(DB_SITE_FILE);
@@ -195,45 +195,40 @@ void		CLogicMgrSiteFile::CheckSiteFile(PDB_SITE_FILE pdsf_src)
 	if(pdsf_src == NULL || nSize < 1)
 		return;
 
-	pDsf = (PDB_SITE_FILE)malloc(nSize);
-	if(pDsf == NULL)
-		return;
+	stDsf.strFeKey = pdsf_src->strFeKey;
+	stDsf.strFilePath = pdsf_src->strFilePath;
+	stDsf.strFileName = pdsf_src->strFileName;
+	stDsf.nPeBit = 0;
+	stDsf.nPeType = 0;
+	stDsf.nUsedFlag = 1;
 
-	pDsf->strFeKey = pdsf_src->strFeKey;
-	pDsf->strFilePath = pdsf_src->strFilePath;
-	pDsf->strFileName = pdsf_src->strFileName;
-	pDsf->nPeBit = 0;
-	pDsf->nPeType = 0;
-	pDsf->nUsedFlag = 1;
-
-	pFindDsf = t_ManageSiteFile->FindPosSKeyID_Item(pDsf->strFeKey, SS_SITE_FILE_KEY_TYPE_FE);
+	pFindDsf = t_ManageSiteFile->FindPosSKeyID_Item(stDsf.strFeKey, SS_SITE_FILE_KEY_TYPE_FE);
 	if(pFindDsf)
 	{
-		pDsf->nID = pFindDsf->nID;
-		pDsf->nRegSvrID = pFindDsf->nRegSvrID;
-		pDsf->nRegDate = pFindDsf->nRegDate;
-		pDsf->nUsedMode	= pFindDsf->nUsedMode;
-		pDsf->nSyncSvrStep = pFindDsf->nSyncSvrStep;
-		pDsf->strFileHash = pFindDsf->strFileHash;
-		pDsf->nFileSize = pFindDsf->nFileSize;
+		stDsf.nID = pFindDsf->nID;
+		stDsf.nRegSvrID = pFindDsf->nRegSvrID;
+		stDsf.nRegDate = pFindDsf->nRegDate;
+		stDsf.nUsedMode	= pFindDsf->nUsedMode;
+		stDsf.nSyncSvrStep = pFindDsf->nSyncSvrStep;
+		stDsf.strFileHash = pFindDsf->strFileHash;
+		stDsf.nFileSize = pFindDsf->nFileSize;
 	}
 	else
 	{
-		pDsf->nID = 0;
-		pDsf->nRegSvrID = 0;
-		pDsf->nRegDate = GetCurrentDateTimeInt();
-		pDsf->nUsedMode = STATUS_USED_MODE_ON;
-		pDsf->nSyncSvrStep = SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO;
-		snprintf(acPath, MAX_PATH-1, "%s/%s", pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
+		stDsf.nID = 0;
+		stDsf.nRegSvrID = 0;
+		stDsf.nRegDate = GetCurrentDateTimeInt();
+		stDsf.nUsedMode = STATUS_USED_MODE_ON;
+		stDsf.nSyncSvrStep = SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO;
+		snprintf(acPath, MAX_PATH-1, "%s/%s", stDsf.strFilePath.c_str(), stDsf.strFileName.c_str());
 		acPath[MAX_PATH-1] = 0;
 		SHAFile(ASIHASH_SHA_LEN_TYPE_256, acPath, szSha256, ASIHASH_SHA_TYPE_256_LEN+1);
 		szSha256[ASIHASH_SHA_TYPE_256_LEN] = 0;
-		pDsf->strFileHash = szSha256;
-		pDsf->nFileSize = GetFileSizeExt(acPath);
+		stDsf.strFileHash = szSha256;
+		stDsf.nFileSize = GetFileSizeExt(acPath);
 	}
 
-	SetSiteFile(pDsf, FALSE);
-	safe_free(pDsf);
+	SetSiteFile(&stDsf, FALSE);
 }
 
 void		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
@@ -287,10 +282,6 @@ void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 
 	if(pDsf == NULL)
 		return;
-	if(bRealTime)
-		WriteLogN("[%s] remain real-time created file to server : fp[%s]:fn[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
-	else
-		WriteLogN("[%s] remain created file to server : fp[%s]:fn[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str());
 	nOldItem = pDsf->nID;
 	t_ManageSiteFile->ApplySiteFile(*pDsf);
 	
@@ -305,25 +296,36 @@ void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 
 	do 
 	{
+/*
 		{
 			PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
 			if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
 						((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
 			{
+				if(bRealTime)
+					WriteLogN("[%s] remain real-time created file to server with fe_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
+				else
+					WriteLogN("[%s] remain created file to server with fe_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
 				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
 				break;
 			}
 		}
+*/
 		{
 			PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
 			if(pdata && 
-				(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-				((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
+				(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && ((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
 			{
+				if(bRealTime)
+					WriteLogN("[%s] remain real-time created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
+				else
+					WriteLogN("[%s] remain created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
+
 				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
 				break;
 			}
 		}
+/*
 		{
 			PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
 			if(pdata && 
@@ -334,6 +336,7 @@ void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 				break;
 			}
 		}
+*/
 	} while (FALSE);
 
 	SendToken.Clear();
@@ -351,25 +354,36 @@ void		CLogicMgrSiteFile::SendPkt_Sync(INT32 nOnceMaxNum)
 
 	INT32 nOnceNum = nOnceMaxNum;
 	INT32 nSendNum = 0;
-
 	TListPVOIDItor begin, end;
-	begin = tSendList.begin();	end = tSendList.end();
+	INT32 nListCount = 0;
+	PDB_SITE_FILE pdsf = NULL;
+	nListCount = tSendList.size();
+	if(nListCount < 1)
+		return;
 
-	while(nSendNum < tSendList.size())
+	begin = tSendList.begin();	end = tSendList.end();
+	while(nSendNum < nListCount)
 	{
-		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
+		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
 
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
-			t_ManageSiteFile->SetPkt((PDB_SITE_FILE)(*begin), SendToken);
-
-			nSendNum += 1;
-			nOnceNum -= 1;
+			pdsf = (PDB_SITE_FILE)(*begin);
+			if(pdsf != NULL)
+			{
+				t_ManageSiteFile->SetPkt(pdsf, SendToken);
+				nSendNum += 1;
+				nOnceNum -= 1;
+			}
 		}
-		SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		if(nSendNum != 0)
+		{
+			SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+			SendToken.Clear();
+			WriteLogN("[%s] send sync site file to server : send[%d]", m_strLogicName.c_str(), nSendNum);
+		}
 	}
 	return;
 }
@@ -378,29 +392,41 @@ void		CLogicMgrSiteFile::SendPkt_Sync(INT32 nOnceMaxNum)
 void		CLogicMgrSiteFile::SendPkt_ReSend(INT32 nOnceMaxNum)
 {
 	TListID tIDList;
-	t_ManageSiteFile->GetItemIDList(tIDList);
-
 	INT32 nOnceNum = nOnceMaxNum;
 	INT32 nSendNum = 0;
-
+	INT32 nListCount = 0;
 	TListIDItor begin, end;
-	begin = tIDList.begin();	end = tIDList.end();
 
-	while(nSendNum < tIDList.size())
+	t_ManageSiteFile->GetItemIDList(tIDList);
+	nListCount = tIDList.size();
+	begin = tIDList.begin();	end = tIDList.end();
+	if(*begin == 0)
 	{
-		nOnceNum = (((tIDList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tIDList.size() - nSendNum));
+		nListCount--;
+	}
+	if(nListCount < 1)
+		return;
+	while(nSendNum < nListCount)
+	{
+		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
 
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
-			t_ManageSiteFile->SetPkt((*begin), SendToken);
-
-			nSendNum += 1;
-			nOnceNum -= 1;
+			if(*begin != 0)
+			{
+				t_ManageSiteFile->SetPkt(*begin, SendToken);
+				nSendNum += 1;
+				nOnceNum -= 1;
+			}
 		}
-		SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		if(nSendNum != 0)
+		{
+			SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+			SendToken.Clear();
+			WriteLogN("[%s] resend site file to server : send[%d]", m_strLogicName.c_str(), nSendNum);
+		}
 	}
 	return;
 }

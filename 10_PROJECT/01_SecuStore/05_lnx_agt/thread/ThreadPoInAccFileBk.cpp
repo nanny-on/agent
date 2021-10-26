@@ -127,7 +127,7 @@ INT32	CThreadPoInAccFile::IsInitLogic()
 	INT32 nRetVal = -1;
 	for(i=0; i<30; i++)
 	{
-		if(t_LogicMgrPtnGBO->IsInitLogic() && t_LogicMgrPtnGWO->IsInitLogic())
+		if(t_LogicMgrPtnGBO->IsInitLogic() || t_LogicMgrPtnGWO->IsInitLogic())
 		{
 			nRetVal = 0;
 			break;

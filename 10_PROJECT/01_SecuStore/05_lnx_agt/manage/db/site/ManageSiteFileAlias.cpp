@@ -129,7 +129,7 @@ PDB_SITE_FILE_ALIAS			CManageSiteFileAlias::FindSiteFileAliasKey(DB_SITE_FILE_AL
 
 INT32					CManageSiteFileAlias::ApplySiteFileAlias(DB_SITE_FILE_ALIAS& data)
 {
-	if(FindItem(data.nID))
+	if(data.nID != 0 && FindItem(data.nID))
 	{
 		return EditSiteFileAlias(data);
 	}

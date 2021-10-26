@@ -211,6 +211,7 @@ void CMainDlg::WM_AgentInitialize(WPARAM wParam, LPARAM lParam)
 		WriteLogN("success to start agent service. (tm_gmtoff:%ld)", GetCurrentTimeZone());
 		t_LogicMgrLogEvent->InitDLEH(EVENT_OPERATION_TYPE_START, EVENT_OBJECT_TYPE_HOST, 0, 0, "", "");
 		t_LogicMgrLogEvent->SetLogEvent();
+
 		nRetVal = 0;
 	}while(FALSE);
 

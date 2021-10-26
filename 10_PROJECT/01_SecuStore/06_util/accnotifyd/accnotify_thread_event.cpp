@@ -807,8 +807,6 @@ BOOL	CThreadAccNotifyEvent::GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo
 
 	if(nLen > 4)
 	{
-		if(_strnicmp(pFileInfo->acFullPath, ASI_ACCNOTIFY_PATH, 4))
-			return FALSE;
 		if(!_stricmp(&pFileInfo->acFullPath[nLen-3], ".so"))
 			return FALSE;
 		else if(!_stricmp(&pFileInfo->acFullPath[nLen-2], ".o"))
@@ -1013,7 +1011,7 @@ INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData,
 
 		if(m_acSrcPath[0] == 0)
 		{
-			strncpy(m_acSrcPath, pChkFileProc->stProcInfo.acFullPath, MAX_PATH-1);
+			strncpy(m_acSrcPath, pChkFileProc->stFileInfo.acFullPath, MAX_PATH-1);
 			m_acSrcPath[MAX_PATH-1] = 0;
 			nAcVal = RET_NONE;
 			nRetVal = 0;
