@@ -198,15 +198,15 @@ typedef wstring StringW;
 #define WM_CLOSE	0x0010
 #define WM_QUIT		0x0012
 
-#define NANNY_AGENT_VERSION		"2.0.4.8"
+#define NANNY_AGENT_VERSION		"2.0.1.1"
 #define NANNY_AGENT_IDENT		"nannysvc"
-#define PWEVT_MON_VERSION		"2.0.4.1"
+#define PWEVT_MON_VERSION		"2.0.1.1"
 #define PWEVT_MON_IDENT			"pwevt_mon"
 
-#define FANOTIFYD_VERSION		"2.0.4.1"
+#define FANOTIFYD_VERSION		"2.0.1.1"
 #define FANOTIFYD_IDENT			"fanotifyd"
 
-#define ACCNOTIFYD_VERSION		"2.0.4.1"
+#define ACCNOTIFYD_VERSION		"2.0.1.1"
 #define ACCNOTIFYD_IDENT		"accnotifyd"
 
 #define NANNY_UPDATE_IDENT		"update"
