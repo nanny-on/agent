@@ -25,7 +25,7 @@ void print_usage()
 {
 	fprintf(stderr, "\nUsage: reqwhite [options]\n");
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -p deny_file_path\n");
+	fprintf(stderr, "  -p deny_file_full_path (ex : /bin/ping)\n");
 	fprintf(stderr, "  -l req_level			(0:default, 1:medium, 2:high, 3:urgency)\n");
 	fprintf(stderr, "  -d expiration date   (0:unlimited, 1~31 days)\n");
 	fprintf(stderr, "  -h help\n\n");
@@ -76,16 +76,21 @@ int valid_check(char *pcPath, int &nLevel, int &nDay)
 		fprintf(stderr, "invalid input data\n");
 		return -1;
 	}
-
+	if(pcPath[0] != '/')
+	{
+		fprintf(stderr, "invalid file path %s\n", pcPath);
+		return -2;
+	}
 	if(is_file(pcPath) != REG_FILE)
 	{
 		fprintf(stderr, "fail to find %s (%d)\n", pcPath, errno);
-		return -2;
+		return -3;
 	}
+
 	if(nDay < 0 || nDay > 31)
 	{
 		fprintf(stderr, "invalid expiration date (%d)\n", nDay);
-		return -3;
+		return -4;
 	}
 	if(nLevel == 0)
 		nLevel = SS_PO_IN_PTN_SP_REQ_LEVEL_NONE;
@@ -98,7 +103,7 @@ int valid_check(char *pcPath, int &nLevel, int &nDay)
 	else
 	{
 		fprintf(stderr, "invalid request level (%d)\n", nLevel);
-		return -4;
+		return -5;
 	}
 
 	return 0;
