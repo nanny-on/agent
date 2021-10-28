@@ -3722,5 +3722,12 @@
     <None Include="10_PROJECT\01_SecuStore\07_test\exe_test_pgm\Makefile" />
     <None Include="10_PROJECT\01_SecuStore\07_test\make_test_pgm\Makefile" />
     <None Include="10_PROJECT\01_SecuStore\07_test\write_test_pgm\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\06_util\editconf\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\06_util\dbuse\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\05_lnx_agt\Makefile" />
+    <None Include="10_PROJECT\01_SecuStore\05_lnx_agt\LICENSE" />
+    <None Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\Makefile" />
   </ItemGroup>
 </Project>
