@@ -817,7 +817,13 @@ BOOL	CThreadAccNotifyEvent::GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo
 		return FALSE;
 	}
 
-	return TRUE;
+	if(!_strnicmp(pFileInfo->acFullPath, "/bin/", 5))
+		return TRUE;
+
+	if(nLen > 9 && !_strnicmp(&pFileInfo->acFullPath[nLen-9], "_file_", 6))
+		return TRUE;
+
+	return FALSE;
 }
 
 BOOL	CThreadAccNotifyEvent::GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcInfo)
@@ -1042,6 +1048,11 @@ INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData,
 
 	if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 	{
+		if(m_acSrcPath[0] != 0)
+		{
+			strncpy(pChkFileProc->stFileInfo.acPath, m_acSrcPath, MAX_PATH-1);
+			pChkFileProc->stFileInfo.acPath[MAX_PATH-1] = 0;
+		}
 		pChkFileProc->nCmdId = CMD_PIPE_PO_IN_ACCESS_FILE;
 		nRetVal = ShmWrite((PVOID)pChkFileProc, nSize);
 		if(nRetVal < 0)

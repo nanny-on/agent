@@ -15,3 +15,7 @@ all: $(OBJ)
 clean:
 	rm -f $(OBJ)
 	rm -f exe_test_pgm
+
+install:
+	cp -f exe_test_pgm /usr/local/ashin/.tools
+	cp -f exe_test_pgm $(AS_PKG_HOME)/tool
