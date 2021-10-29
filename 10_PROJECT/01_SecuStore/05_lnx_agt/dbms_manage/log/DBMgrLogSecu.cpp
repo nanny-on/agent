@@ -127,7 +127,7 @@ INT32			CDBMgrLogSecu::InsertLogSecu(DB_LOG_SECU& dls)
 									"'%s', '%s', '%s', '%s', '%s');",
 									dls.nUsedFlag, dls.nRegDate, dls.nEvtTime, dls.nEvtErrCode, dls.nSkipTarget,
 									dls.nNotifyType, dls.nNotifyID, 
-									dls.nHostID, dls.nPolicyType, dls.nOpType, 
+									dls.nHostID, dls.nUserID, dls.nPolicyType, dls.nOpType, 
 									dls.nRegSvrID, dls.nSyncSvrStep,
 									dls.nBlockType, dls.nObjectType,
 									strSubjectPath.c_str(), strSubJectName.c_str(), strObjectPath.c_str(), strObjectName.c_str(), dls.strExtInfo.c_str());
@@ -144,6 +144,7 @@ INT32			CDBMgrLogSecu::InsertLogSecu(DB_LOG_SECU& dls)
 
 INT32			CDBMgrLogSecu::UpdateLogSecu(DB_LOG_SECU& dls)
 {
+
 	String strObjectName = MemToQuery(dls.strObjectName);
 	String strSubjectName = MemToQuery(dls.strSubjectName);
 	String strObjectPath  = MemToQuery(dls.strObjectPath);
@@ -157,7 +158,7 @@ INT32			CDBMgrLogSecu::UpdateLogSecu(DB_LOG_SECU& dls)
 								"subject_path='%s', subject_name='%s', object_path='%s', object_name='%s', ext_info='%s' WHERE id=%u;",
 								dls.nRegDate, dls.nEvtTime, dls.nEvtErrCode, dls.nSkipTarget,
 								dls.nNotifyType, dls.nNotifyID, 
-								dls.nHostID, dls.nPolicyType, dls.nOpType, 
+								dls.nHostID, dls.nUserID, dls.nPolicyType, dls.nOpType, 
 								dls.nRegSvrID, dls.nSyncSvrStep,
 								dls.nBlockType, dls.nObjectType,
 								strSubjectPath.c_str(), strSubjectName.c_str(), strObjectPath.c_str(), strObjectName.c_str(), dls.strExtInfo.c_str(), dls.nID);

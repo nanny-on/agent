@@ -117,13 +117,15 @@ INT32		CLogicMgrPoInPtnExTrust::CheckPtnLifeCycle()
 		WriteLogN("[%s] remote key from auto ptn data success : [%d]", m_strLogicName.c_str(), tDelIDList.size());
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_IDList(tDelIDList);
 		{
 			SendData_Link(G_TYPE_PO_IN_PTN_EX_TRUST, G_CODE_COMMON_DEL, SendToken);
 		}
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return 0;
 
@@ -180,7 +182,8 @@ void		CLogicMgrPoInPtnExTrust::SetPoInPtnExTrsut(DB_PO_IN_PTN_EX_TRUST& data)
 			t_ManagePoInPtnExTrust->AddPoInPtnExTrust(data);
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(1);
 		t_ManagePoInPtnExTrust->SetPkt(&data, SendToken);
@@ -188,6 +191,7 @@ void		CLogicMgrPoInPtnExTrust::SetPoInPtnExTrsut(DB_PO_IN_PTN_EX_TRUST& data)
 			SendData_Link(G_TYPE_PO_IN_PTN_EX_TRUST, G_CODE_COMMON_ADD, SendToken);
 		}
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

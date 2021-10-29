@@ -109,10 +109,12 @@ INT32		CLogicMgrHostSys::AnalyzePkt_FromMgr_Edit_Ext()
 		return AZPKT_CB_RTN_DBMS_FAIL;	
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
 		t_ManageHostSys->SetPkt(SendToken);
 		SendData_Link(G_TYPE_HOST_SYS, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return AZPKT_CB_RTN_SUCCESS_END;
@@ -173,10 +175,12 @@ void		CLogicMgrHostSys::SendPkt_Edit()
 	if(!nSendPkt)	return;
 
 SEND_PKT:
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostSys->SetPkt(&dhs, SendToken);
 	SendData_Mgr(G_TYPE_HOST_SYS, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	m_nSendSysFlag = 1;
 	return;
 }
@@ -197,11 +201,11 @@ void		CLogicMgrHostSys::SendPkt_SysInfo()
 			dhs.nOsPd	= t_SystemInfo->GetSystemPdType();
 		}
 	}
-
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostSys->SetPkt(&dhs, SendToken);
 	SendData_Mgr(G_TYPE_HOST_SYS, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }

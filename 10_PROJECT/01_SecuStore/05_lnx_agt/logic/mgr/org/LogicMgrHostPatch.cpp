@@ -89,11 +89,12 @@ INT32		CLogicMgrHostPatch::AnalyzePkt_FromMgr_Edit_Ext()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);	
 		t_ManageHostPatch->SetPkt(SendToken);
-
 		SendData_Link(G_TYPE_HOST_PATCH, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return AZPKT_CB_RTN_SUCCESS_END;
@@ -124,9 +125,11 @@ void		CLogicMgrHostPatch::MakePatchInfo(TListDBHostPatch& tUnitList)
 
 void		CLogicMgrHostPatch::SendPkt_Sync()
 {
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostPatch->SetPkt(SendToken);
 	SendData_Mgr(G_TYPE_HOST_PATCH, G_CODE_COMMON_SYNC, SendToken);
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

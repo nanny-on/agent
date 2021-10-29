@@ -58,20 +58,26 @@ INT32		CLogicLogRsBk::AnalyzePkt_FromLink_Ext_Sync()
 	INT32 nOnceNum = 0, nSendedNum = 0;;
 	INT32 nTotalNum = t_ManageLogRsBk->Count();
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(nTotalNum);
 		SendData_Link(m_nSessionID, G_TYPE_LOG_RS_BK, G_CODE_COMMON_MULTI_BEGIN, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 
 	do
 	{
+		m_tMutex.Lock();
 		nOnceNum = t_ManageLogRsBk->SetPkt(SendToken, m_nSessionID, 1000);
 		if(nOnceNum)
 		{
 			SendData_Link(m_nSessionID, G_TYPE_LOG_RS_BK, G_CODE_COMMON_MULTI_LOOP, SendToken);
 			SendToken.Clear();
-
+		}
+		m_tMutex.UnLock();
+		if(nOnceNum)
+		{
 			nSendedNum += nOnceNum;
 			WriteLogN("[%s] send init data loop [%d/%d]", m_strLogicName.c_str(), nSendedNum, nTotalNum);
 		}
@@ -79,9 +85,11 @@ INT32		CLogicLogRsBk::AnalyzePkt_FromLink_Ext_Sync()
 	
 	
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(nSendedNum);
 		SendData_Link(m_nSessionID, G_TYPE_LOG_RS_BK, G_CODE_COMMON_MULTI_END, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return SetHdrAndRtn(AZPKT_CB_RTN_SUCCESS);
@@ -112,9 +120,11 @@ INT32		CLogicLogRsBk::AnalyzePkt_FromLink_Ext_Restore()
 
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(m_tSendIDList.size());
 		SendData_Link(m_nSessionID, G_TYPE_LOG_RS_BK, G_CODE_COMMON_RESTORE, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return SetHdrAndRtn(AZPKT_CB_RTN_SUCCESS);

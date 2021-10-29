@@ -216,11 +216,12 @@ INT32		CLogicMgrPoInVulnScan::OnTimer_Logic()
 INT32    CLogicMgrPoInVulnScan::SendData_Link_PoInVulnScan(UINT32 nType, UINT32 nExtOpt)
 {		
 	WriteLogN("[%s] send link po in vuln scan unit type : [%d]", m_strLogicName.c_str(), nType);
-
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nType);
 	SendToken.TokenAdd_32(nExtOpt);
 	SendData_Link(0, G_TYPE_PO_IN_VULN_SCAN, G_CODE_COMMON_SCAN, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return AZPKT_CB_RTN_SUCCESS;
 }
 //---------------------------------------------------------------------------

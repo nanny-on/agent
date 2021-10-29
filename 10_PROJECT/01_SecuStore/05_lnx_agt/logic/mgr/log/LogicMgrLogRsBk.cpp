@@ -243,7 +243,8 @@ void		CLogicMgrLogRsBk::SetLogRsBk(DB_LOG_RS_BK& data)
 		}
 	}
 	
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		if(!ISSYNCSTEP(data.nSyncSvrStep) && !(data.nSkipTarget & SS_ENV_LOG_OPTION_FLAGE_SKIP_SAVE_SERVER))
 		{
@@ -261,6 +262,7 @@ void		CLogicMgrLogRsBk::SetLogRsBk(DB_LOG_RS_BK& data)
 			SendData_Link(G_TYPE_LOG_RS_BK, G_CODE_COMMON_SYNC, SendToken);
 			SendToken.Clear();
 		}
+		m_tMutex.UnLock();
 	}
 	return;
 }

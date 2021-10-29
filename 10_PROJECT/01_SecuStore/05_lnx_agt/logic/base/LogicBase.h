@@ -250,7 +250,7 @@ protected:
 protected:
 	TListDBLogEvent			m_tDLEList;
 	DB_LOG_EVENT			m_tDLE;
-	
+	CMutexExt				m_tMutex;
 	
 public:	
 	void	InitDLEH(UINT32 nOpType, UINT32 nOType, UINT32 nOCode, UINT32 nOID, String strOInfo, String strDesc = "", UINT32 nSyncMode = SS_LOG_EVENT_HOST_SYNC_MODE_AGT);

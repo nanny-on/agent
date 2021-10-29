@@ -45,9 +45,11 @@ CLogicLocalEnvAuth::~CLogicLocalEnvAuth()
 
 void	CLogicLocalEnvAuth::SendPkt_LocalEnvAuth_Edit()
 {
+	m_tMutex.Lock();
 	t_ManageLocalEnvAuth->SetPkt(SendToken);
 	SendData_Link(G_TYPE_LOCAL_ENV_AUTH, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

@@ -137,7 +137,8 @@ void		CLogicMgrLogDeployFile::SetLogDeployFile(DB_LOG_DEPLOY_FILE& dldf)
 		t_ManageLogDeployFile->AddLogDeployFile(dldf);
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogDeployFile->SetPkt(&dldf, SendToken);
@@ -147,6 +148,7 @@ void		CLogicMgrLogDeployFile::SetLogDeployFile(DB_LOG_DEPLOY_FILE& dldf)
 		}
 		SendData_Link(G_TYPE_LOG_DEPLOY_FILE, G_CODE_COMMON_SYNC, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -175,6 +177,7 @@ void		CLogicMgrLogDeployFile::SendPkt_Sync(INT32 nOnceMaxNum)
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
 
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -185,7 +188,8 @@ void		CLogicMgrLogDeployFile::SendPkt_Sync(INT32 nOnceMaxNum)
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_LOG_DEPLOY_FILE, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

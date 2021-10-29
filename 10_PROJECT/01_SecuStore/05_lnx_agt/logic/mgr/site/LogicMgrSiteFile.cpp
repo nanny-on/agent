@@ -279,12 +279,23 @@ void		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
 void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 {
 	INT32 nOldItem = 0;
-
+	BOOL bSendServer = FALSE;
 	if(pDsf == NULL)
 		return;
 	nOldItem = pDsf->nID;
 	t_ManageSiteFile->ApplySiteFile(*pDsf);
-	
+	PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
+	if(pdata && (pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && ((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
+	{
+		bSendServer = TRUE;
+		if(bRealTime)
+			WriteLogN("[%s] remain real-time created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
+		else
+			WriteLogN("[%s] remain created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
+	}
+
+
+	m_tMutex.Lock();
 	SendToken.Set(1024);
 	SendToken.TokenAdd_32(1);
 	t_ManageSiteFile->SetPkt(pDsf, SendToken);
@@ -293,53 +304,12 @@ void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 	{
 		SendData_Link(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
 	}
-
-	do 
+	if(bSendServer == TRUE)
 	{
-/*
-		{
-			PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
-			if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-						((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-			{
-				if(bRealTime)
-					WriteLogN("[%s] remain real-time created file to server with fe_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
-				else
-					WriteLogN("[%s] remain created file to server with fe_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
-				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-				break;
-			}
-		}
-*/
-		{
-			PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
-			if(pdata && 
-				(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && ((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-			{
-				if(bRealTime)
-					WriteLogN("[%s] remain real-time created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
-				else
-					WriteLogN("[%s] remain created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
-
-				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-				break;
-			}
-		}
-/*
-		{
-			PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
-			if(pdata && 
-				(pdata->nRTFGMode & SS_PO_NC_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-				((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-			{
-				SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-				break;
-			}
-		}
-*/
-	} while (FALSE);
-
+		SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+	}
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 
@@ -365,7 +335,7 @@ void		CLogicMgrSiteFile::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < nListCount)
 	{
 		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -381,9 +351,9 @@ void		CLogicMgrSiteFile::SendPkt_Sync(INT32 nOnceMaxNum)
 		if(nSendNum != 0)
 		{
 			SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-			SendToken.Clear();
-			WriteLogN("[%s] send sync site file to server : send[%d]", m_strLogicName.c_str(), nSendNum);
 		}
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -409,7 +379,7 @@ void		CLogicMgrSiteFile::SendPkt_ReSend(INT32 nOnceMaxNum)
 	while(nSendNum < nListCount)
 	{
 		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -424,9 +394,9 @@ void		CLogicMgrSiteFile::SendPkt_ReSend(INT32 nOnceMaxNum)
 		if(nSendNum != 0)
 		{
 			SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-			SendToken.Clear();
-			WriteLogN("[%s] resend site file to server : send[%d]", m_strLogicName.c_str(), nSendNum);
 		}
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

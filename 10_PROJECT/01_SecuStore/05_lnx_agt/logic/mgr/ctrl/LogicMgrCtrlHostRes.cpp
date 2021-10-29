@@ -77,10 +77,13 @@ INT32		CLogicMgrCtrlHostRes::AnalyzePkt_FromMgr_Ext_HostResInfo()
 
 	INT32 nConSessionID = 0, nResType = 0, nCnt = 0;
 
-	SendToken.Clear();
+	
 	if( RecvToken.TokenDel_32(nConSessionID) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 	if( RecvToken.TokenDel_32(m_nHostID) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 	if( RecvToken.TokenDel_32(nResType) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
+
+	m_tMutex.Lock();
+	SendToken.Clear();
 	SendToken.TokenAdd_32(nConSessionID);
 	SendToken.TokenAdd_32(m_nHostID);
 	SendToken.TokenAdd_32(nResType);
@@ -144,6 +147,8 @@ INT32		CLogicMgrCtrlHostRes::AnalyzePkt_FromMgr_Ext_HostResInfo()
 
 	SendData_Mgr(G_TYPE_CTL_RESINFO, m_nPktCode, SendToken);
 	SendToken.Clear();
+
+	m_tMutex.UnLock();
 	m_nHostID = 0;
 
 	return AZPKT_CB_RTN_SUCCESS_END;

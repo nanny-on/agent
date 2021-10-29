@@ -68,7 +68,7 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext()
 //---------------------------------------------------------------------------
 INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectAdd()
 {
-	SendToken.Clear();
+	
 	INT32 nConSessionID = 0, nCnt = 0, nRet = AZPKT_CB_RTN_SEND_ACK, nID = 0;
 	String strDevName = "", strDvInstanceID = "", strDvPaInstanceID = "", strClassName = "";
 
@@ -79,14 +79,18 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectAdd()
 	if( RecvToken.TokenDel_String(strDvPaInstanceID) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 	if( RecvToken.TokenDel_String(strClassName) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 
-	SendToken.TokenAdd_32(nConSessionID);
-	SendToken.TokenAdd_32(m_nHostID);
-
+	
 	PDB_PO_IN_DEVO_OP pdata = t_ManagePoInDevOOp->LastItem();
 	if(pdata)
 	{
 		if(pdata->nBlockMode != 1)	return nRet;
 	}
+
+	m_tMutex.Lock();
+
+	SendToken.Clear();
+	SendToken.TokenAdd_32(nConSessionID);
+	SendToken.TokenAdd_32(m_nHostID);
 
 	nID = t_ManagePoDvDefault->FindDvPolID(strDvInstanceID, strDvPaInstanceID, 0);
 	if(nID)
@@ -129,12 +133,14 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectAdd()
 			SendToken.TokenAdd_32(AZPKT_CB_RTN_RESULT_FAILED);
 		}
 	}
+	SendToken.Clear();
+	m_tMutex.UnLock();
 	return nRet;
 }
 //---------------------------------------------------------------------------
 INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectDel()
 {
-	SendToken.Clear();
+
 	INT32 nConSessionID = 0, nCnt = 0, nID = 0, nRet = AZPKT_CB_RTN_SEND_ACK;
 
 	if(!RecvToken.TokenDel_32(nConSessionID))	return AZPKT_CB_RTN_PKT_INVALID;
@@ -143,6 +149,8 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectDel()
 
 	if(nID)
 	{
+		m_tMutex.Lock();
+
 		SendToken.TokenAdd_32(nConSessionID);
 		SendToken.TokenAdd_32(m_nHostID);
 		SendToken.TokenAdd_32(nID);
@@ -152,6 +160,7 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectDel()
 			SendToken.TokenAdd_32(AZPKT_CB_RTN_RESULT_FAILED);
 		SendData_Mgr(G_TYPE_PO_DV_LO, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 		m_nHostID = 0;
 
 //		t_ASIEPSAPPDLLUtil->Stop();
@@ -160,12 +169,14 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectDel()
 	}
 	else
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(nConSessionID);
 		SendToken.TokenAdd_32(m_nHostID);
 		SendToken.TokenAdd_32(nID);
 		SendToken.TokenAdd_32(AZPKT_CB_RTN_RESULT_FAILED);
 		SendData_Mgr(G_TYPE_PO_DV_LO, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 		m_nHostID = 0;
 	}
 
@@ -182,13 +193,12 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_DirectDel()
 //---------------------------------------------------------------------------
 INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_GetDvLo()
 {
-	SendToken.Clear();
-
 	INT32 nConSessionID = 0, nCnt = 0;
 
 	if(!RecvToken.TokenDel_32(nConSessionID))		return AZPKT_CB_RTN_PKT_INVALID;
 	if(!RecvToken.TokenDel_32(m_nHostID))			return AZPKT_CB_RTN_PKT_INVALID;
 	
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nConSessionID);
 	SendToken.TokenAdd_32(m_nHostID);
 
@@ -196,6 +206,7 @@ INT32		CLogicMgrPoDvLo::AnalyzePkt_FromMgr_Ext_GetDvLo()
 
 	SendData_Mgr(G_TYPE_PO_DV_LO, m_nPktCode, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	m_nHostID = 0;
 
 	return AZPKT_CB_RTN_SUCCESS_END;

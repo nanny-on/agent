@@ -183,7 +183,8 @@ void		CLogicMgrLogEvent::SetLogEvent(DB_LOG_EVENT& dle)
 		t_ManageLogEvent->AddLogEvent(dle);
 	}
 	
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogEvent->SetPkt(&dle, SendToken);
@@ -196,6 +197,7 @@ void		CLogicMgrLogEvent::SetLogEvent(DB_LOG_EVENT& dle)
 			SendData_Link(G_TYPE_LOG_EVENT, G_CODE_COMMON_ADD, SendToken);
 		}
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -225,18 +227,18 @@ void		CLogicMgrLogEvent::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < tSendList.size())
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
 			t_ManageLogEvent->SetPkt((PDB_LOG_EVENT)(*begin), SendToken);
-
 			nSendNum += 1;
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_LOG_EVENT_HOST, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

@@ -76,6 +76,7 @@ INVALID_PKT:
 
 void		CLogicEnvNotifyInfo::SendPkt_Notify_Sch_info(MEM_ENV_NOTIFY_INFO_SCH& menis)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_DPH(menis.tDPH);
 
 	SendToken.TokenAdd_32(menis.nNotifyType);
@@ -87,6 +88,7 @@ void		CLogicEnvNotifyInfo::SendPkt_Notify_Sch_info(MEM_ENV_NOTIFY_INFO_SCH& meni
 
 	SendData_Link(G_TYPE_ENV_NOTIFY_INFO, G_CODE_COMMON_INFO, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------

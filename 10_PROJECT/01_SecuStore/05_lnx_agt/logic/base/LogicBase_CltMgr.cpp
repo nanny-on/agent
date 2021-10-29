@@ -129,8 +129,10 @@ void	CLogicBase::AnalyzePkt_FromMgr(PPKT_DATA pkt_data)
 				}
 				case AZPKT_CB_RTN_SEND_ACK:
 				{
+					m_tMutex.Lock();
 					SendData_Mgr(m_nPktType, m_nPktCode, SendToken);
 					SendToken.Clear();
+					m_tMutex.UnLock();
 					break;
 				}
 				case AZPKT_CB_RTN_RESULT_FAILED:
@@ -247,8 +249,10 @@ void	CLogicBase::AnalyzePkt_FromMgr_Edit()
 		}
 		case AZPKT_CB_RTN_SEND_ACK:
 		{
+			m_tMutex.Lock();
 			SendData_Mgr(m_nPktType, m_nPktCode, SendToken); 
 			SendToken.Clear();
+			m_tMutex.UnLock();
 			break;
 		}
 		case AZPKT_CB_RTN_RESULT_FAILED:
@@ -284,10 +288,12 @@ void	CLogicBase::AnalyzePkt_FromMgr_Edit()
 		}
 
 		{
+			m_tMutex.Lock();
 			SendToken.TokenAdd_32(m_tDPH->nID);
 			SendToken.TokenAdd_32(m_tDPH->nSeqNo);
 			SendData_Mgr(m_nPktType, m_nPktCode, SendToken);
 			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 	}	
 	else

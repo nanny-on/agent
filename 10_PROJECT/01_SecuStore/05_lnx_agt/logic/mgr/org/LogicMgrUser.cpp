@@ -285,23 +285,25 @@ SEND_PKT:
 
 INT32		CLogicMgrUser::SendPkt_Auth(PDB_USER pdu)
 {
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageUser->SetPkt(pdu, SendToken);
 	SendData_Mgr(G_TYPE_USER, G_CODE_COMMON_AUTH, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return 0;
 }
 //---------------------------------------------------------------------------
 
 INT32		CLogicMgrUser::SendPkt_ChgPW(String strAccountID, String strPassword)
 {
+	m_tMutex.Lock();
 	SendToken.Clear();
 	SendToken.TokenAdd_String(strAccountID);
 	SendToken.TokenAdd_String(strPassword);
 	SendData_Mgr(G_TYPE_USER, G_CODE_COMMON_CHANGE, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return 0;
 }
 //---------------------------------------------------------------------------

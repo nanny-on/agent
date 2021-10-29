@@ -191,11 +191,11 @@ INT32		CLogicHostVulnRst::AnalyzePkt_FromLink_Ext_Sync()
 
 void		CLogicHostVulnRst::SendPkt_Del(UINT32 nID)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nID);
-	
 	SendData_Link(G_TYPE_HOST_VULN_RST, G_CODE_COMMON_DEL, SendToken);
-	//WriteLogN("[%s] send pkt scan : [id:%d]", m_strLogicName.c_str(), nID);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------

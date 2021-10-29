@@ -73,13 +73,14 @@ INT32		CLogicMgrCtrlRestore::AnalyzePkt_FromMgr_Add_Ext()
 	if (RecvToken.TokenDel_String(strDescription) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 	RecvToken.TokenSkip_Block();
 
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nConSessionID);
 	SendToken.TokenAdd_32(m_nHostID);
 	SendToken.TokenAdd_32(0);
 
 	SendData_Mgr(G_TYPE_CTL_RESTORE, G_CODE_COMMON_INFO, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return AZPKT_CB_RTN_SUCCESS;
 }
 //---------------------------------------------------------------------------
@@ -93,13 +94,14 @@ INT32		CLogicMgrCtrlRestore::AnalyzePkt_FromMgr_Del_Ext()
 	if (!RecvToken.TokenDel_32(nSequenceNumber))		return AZPKT_CB_RTN_PKT_INVALID;
 	RecvToken.TokenSkip_Block();
 
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nConSessionID);
 	SendToken.TokenAdd_32(m_nHostID);
 	SendToken.TokenAdd_32(nSequenceNumber);
 
 	SendData_Mgr(G_TYPE_CTL_RESTORE, m_nPktCode, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return AZPKT_CB_RTN_SUCCESS;
 }
 //---------------------------------------------------------------------------   
@@ -122,6 +124,7 @@ INT32		CLogicMgrCtrlRestore::AnalyzePkt_FromMgr_Ext_GetRestoreList()
 	if( RecvToken.TokenDel_32(nConSessionID) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 	if( RecvToken.TokenDel_32(m_nHostID) < 0)		return AZPKT_CB_RTN_PKT_INVALID;
 
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nConSessionID);
 	SendToken.TokenAdd_32(m_nHostID);
 
@@ -129,6 +132,6 @@ INT32		CLogicMgrCtrlRestore::AnalyzePkt_FromMgr_Ext_GetRestoreList()
 
 	SendData_Mgr(G_TYPE_CTL_RESTORE, m_nPktCode, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return AZPKT_CB_RTN_SUCCESS;
 }

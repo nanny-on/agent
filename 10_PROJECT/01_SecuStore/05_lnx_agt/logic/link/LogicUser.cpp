@@ -99,7 +99,14 @@ INT32		CLogicUser::AnalyzePkt_FromLink_Ext_End()
 	if(nMgrSvrAuthStatus == CLIENT_CON_STATUS_DISCONNECTED)
 	{
 		m_nPktRst = ERR_SOCKET_CONNECT_FAIL;
-		goto INVALID_PKT;
+
+		m_tMutex.Lock();
+		SendToken.TokenAdd_32(m_nPktRst);
+		SendToken.TokenAdd_32(SS_HOST_OPTION_TYPE_LOGOFF_NOT_USED);
+		SendData_Link(m_tPktData, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		return 0;
 	}
 
 	if(pdlea)
@@ -117,8 +124,12 @@ INT32		CLogicUser::AnalyzePkt_FromLink_Ext_End()
 		if(SetER(t_ManageLocalEnvAuth->EditLocalEnvAuth(dlea)))
 		{
 			SetDLEH_EC(g_nErrRtn);
+			m_tMutex.Lock();
+			SendData_Link(m_tPktData, SendToken);
+			SendToken.Clear();
+			m_tMutex.UnLock();
 			WriteLogE("[%s] edit information : [%d]", m_strLogicName.c_str(), g_nErrRtn);
-			goto SEND_PKT;
+			return 0;
 		}
 
 		t_LogicLocalEnvAuth->SendPkt_LocalEnvAuth_Edit();
@@ -127,41 +138,37 @@ INT32		CLogicUser::AnalyzePkt_FromLink_Ext_End()
 	}
 
 	{
+		WriteLogN("[%s] user logoff by user ", m_strLogicName.c_str());
 		t_LogicMgrHost->SendPkt_Edit();
-
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(m_nPktRst);
 		SendToken.TokenAdd_32(SS_HOST_OPTION_TYPE_LOGOFF_USER);	
-		WriteLogN("[%s] user logoff by user ", m_strLogicName.c_str());
-	}
-
-	{
 		PDB_HOST pdh = t_ManageHost->FirstItem();
 		if(!pdh)
 		{
+			SendData_Link(m_tPktData, SendToken);
+			SendToken.Clear();
+			m_tMutex.UnLock();
 			WriteLogE("[%s] not find host first item..", m_strLogicName.c_str());
-			goto SEND_PKT;
+			return 0;
 		}
 		PDB_USER pdu = t_ManageUser->FindUserAccountID(strAccountID);
 		if(!pdu)
 		{
+			SendData_Link(m_tPktData, SendToken);
+			SendToken.Clear();
+			m_tMutex.UnLock();
 			WriteLogE("[%s] not find user item..", m_strLogicName.c_str());
-			goto SEND_PKT;
+			return 0;
 		}
 
-		InitDLEU(m_nEvtOpType, EVENT_OBJECT_TYPE_USER, 0, pdu->nID, pdu->strAccountID,  m_strEvtDesc);
 		t_LogicMgrLogEvent->SetLogEvent(m_tDLE);
+		SendData_Link(m_tPktData, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		InitDLEU(m_nEvtOpType, EVENT_OBJECT_TYPE_USER, 0, pdu->nID, pdu->strAccountID,  m_strEvtDesc);
+
 	}
-
-	goto SEND_PKT;
-
-INVALID_PKT:
-	SendToken.TokenAdd_32(m_nPktRst);
-	SendToken.TokenAdd_32(SS_HOST_OPTION_TYPE_LOGOFF_NOT_USED);
-	SendData_Link(m_tPktData, SendToken);
-	return 0;
-
-SEND_PKT:
-	SendData_Link(m_tPktData, SendToken);
 	return 0;
 }
 //---------------------------------------------------------------------------
@@ -174,24 +181,37 @@ INT32		CLogicUser::AnalyzePkt_FromLink_Ext_ChgPW()
 	String	strAccount, strChangePw;
 	INT32 nMgrSvrAuthStatus = CLIENT_CON_STATUS_DISCONNECTED;
 
-	if( RecvToken.TokenDel_String(strAccount) < 0)			goto INVALID_PKT;
-	if( RecvToken.TokenDel_String(strChangePw) < 0)			goto INVALID_PKT;
+	if( RecvToken.TokenDel_String(strAccount) < 0)
+	{
+		m_tMutex.Lock();
+		SendToken.TokenAdd_32(m_nPktRst);
+		SendData_Link(m_tPktData, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		return 0;
+	}
+	if( RecvToken.TokenDel_String(strChangePw) < 0)
+	{
+		m_tMutex.Lock();
+		SendToken.TokenAdd_32(m_nPktRst);
+		SendData_Link(m_tPktData, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		return 0;
+	}
 
 	t_EnvInfoOp->GetMgrSvrAuthStatus(nMgrSvrAuthStatus);
 	if(nMgrSvrAuthStatus == CLIENT_CON_STATUS_DISCONNECTED)
 	{
 		m_nPktRst = ERR_SOCKET_CONNECT_FAIL;
-		goto INVALID_PKT;
+		m_tMutex.Lock();
+		SendToken.TokenAdd_32(m_nPktRst);
+		SendData_Link(m_tPktData, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		return 0;
 	}
 
-	goto SEND_PKT;
-
-INVALID_PKT:
-	SendToken.TokenAdd_32(m_nPktRst);
-	SendData_Link(m_tPktData, SendToken);
-	return 0;
-
-SEND_PKT:
 	t_LogicMgrUser->SendPkt_ChgPW(strAccount, strChangePw);
 	return 0;
 }
@@ -202,31 +222,36 @@ SEND_PKT:
 
 void		CLogicUser::SendPkt_Auth(UINT32 nPktRtn, DB_USER& du)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nPktRtn);
 	t_ManageUser->SetPkt(&du, SendToken);
 	SendData_Link(G_TYPE_USER, G_CODE_COMMON_AUTH, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicUser::SendPkt_Logout(UINT32 nPktRtn)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(m_nPktRst);
 	SendToken.TokenAdd_32(nPktRtn);
 	SendData_Link(G_TYPE_USER, G_CODE_COMMON_END, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicUser::SendPkt_UserChgPW(UINT32 nPktRtn, DB_USER& du)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nPktRtn);
 	t_ManageUser->SetPkt(&du, SendToken);
 	SendData_Link(G_TYPE_USER, G_CODE_COMMON_CHANGE, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

@@ -86,10 +86,12 @@ INT32		CLogicPoFaClear::AnalyzePkt_FromLink_Ext_Scan()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(m_nRecvID);
 		SendToken.TokenAdd_32(GetCurrentDateTimeInt());
 		SendData_Link(m_nPktType, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	
 	return SetHdrAndRtn(AZPKT_CB_RTN_SUCCESS);
@@ -153,9 +155,11 @@ INT32		CLogicPoFaClear::AnalyzePkt_FromLink_Del_Ext()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_IDList(m_tIDList);
 		SendData_Link(m_nPktType, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return SetHdrAndRtn(AZPKT_CB_RTN_SUCCESS_END);
 }
@@ -166,41 +170,49 @@ INT32		CLogicPoFaClear::AnalyzePkt_FromLink_Del_Ext()
 
 void		CLogicPoFaClear::SendPkt_Init(UINT32 nID, UINT32 nLastChkTime)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nID);
 	SendToken.TokenAdd_32(nLastChkTime);
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_INIT, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicPoFaClear::SendPkt_Find(PDB_LOG_DOC pdld)
 {
+	m_tMutex.Lock();
 	SendToken.Set(1024);
 	SendToken.TokenAdd_32(1);
 	t_ManageLogDoc->SetPkt_Link(pdld, SendToken);
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_FIND, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 
 void		CLogicPoFaClear::SendPkt_Progress(PMEM_FIND_ORDER_INFO pMFOI)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(pMFOI->nPoID);
 	SendToken.TokenAdd_32(pMFOI->nNotiPgTotal);
 	SendToken.TokenAdd_32(pMFOI->nNotiPgEnd);
 
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_PROGRESS, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicPoFaClear::SendPkt_End(MEM_FIND_ORDER_INFO& tMFOI)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(tMFOI.nPoID);
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_END, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -213,11 +225,13 @@ void		CLogicPoFaClear::SendPkt_Del_Last(MEM_FIND_ORDER_INFO& tMFOI)
 
 void		CLogicPoFaClear::SendPkt_Del_Last(UINT32 nPolicyType, UINT32 nOpType, UINT32 nTotalDelCnt)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(nPolicyType);
 	SendToken.TokenAdd_32(nOpType);
 	SendToken.TokenAdd_32(nTotalDelCnt);
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_LAST, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------

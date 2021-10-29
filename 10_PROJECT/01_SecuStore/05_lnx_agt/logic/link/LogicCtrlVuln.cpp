@@ -90,6 +90,9 @@ INT32		CLogicCtrlVuln::ScanPtnVulnCustom(PDB_PTN_VULN_SCAN pdata)
 
 void		CLogicCtrlVuln::SendPkt_Scan(UINT32 nID, UINT32 nRst, TListMemVulnRst* pVulnPatchList)
 {
+
+	m_tMutex.Lock();
+	SendToken.Clear();
 	SendToken.TokenAdd_32(nID);
 	SendToken.TokenAdd_32(nRst);
 
@@ -115,8 +118,10 @@ void		CLogicCtrlVuln::SendPkt_Scan(UINT32 nID, UINT32 nRst, TListMemVulnRst* pVu
 	}
 
 	SendData_Link(G_TYPE_CTL_VULN, G_CODE_COMMON_SCAN, SendToken);
-	WriteLogN("[%s] send pkt scan : [id:%d][rst:%d][rst_num:%d]", m_strLogicName.c_str(), nID, nRst, (pVulnPatchList ? pVulnPatchList->size() : 0));
 	SendToken.Clear();
+	m_tMutex.UnLock();
+	WriteLogN("[%s] send pkt scan : [id:%d][rst:%d][rst_num:%d]", m_strLogicName.c_str(), nID, nRst, (pVulnPatchList ? pVulnPatchList->size() : 0));
+	
 }
 //---------------------------------------------------------------------------
 

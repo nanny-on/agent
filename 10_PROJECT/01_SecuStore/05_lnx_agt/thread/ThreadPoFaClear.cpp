@@ -221,13 +221,13 @@ INT32		CThreadPoFaClear::ChkScanFile(PMEM_FIND_ORDER_INFO pMFOI)
 	DB_LOG_DOC tDLD;
 	String strObjectFullPath;
 	PKT_DATA pkt_data;
-	MemToken SendToken(2048);
+	MemToken stSendToken(2048);
 	UINT32 nIdx = 0;
 	while(nIdx < nAFFINum && GetContinue())
 	{
 		memset(&tDLD, 0, sizeof(DB_LOG_DOC));
 		memset(&pkt_data, 0, sizeof(PKT_DATA));
-		SendToken.Clear();
+		stSendToken.Clear();
 		
 		tDLD.strObjectPath	= tAFFI[nIdx].szFilePath;
 		tDLD.strObjectName	= tAFFI[nIdx].szFileName;
@@ -245,11 +245,11 @@ INT32		CThreadPoFaClear::ChkScanFile(PMEM_FIND_ORDER_INFO pMFOI)
 		tDLD.nOpType		= pMFOI->nOpType;
 		tDLD.nPolicyType	= (pMFOI->nPoID ? pMFOI->nPoID : pMFOI->nID) + ASI_EPS_APP_POLICY_GROUP_ID_FA_CLEAR;
 		
-		SendToken.TokenAdd_32(ERR_SUCCESS);
-		t_ManageLogDoc->SetPkt_Link(&tDLD, SendToken);
+		stSendToken.TokenAdd_32(ERR_SUCCESS);
+		t_ManageLogDoc->SetPkt_Link(&tDLD, stSendToken);
 
-		pkt_data.body.data = (PBYTE)SendToken.GetData();
-		pkt_data.hdr.length = SendToken.GetLength();
+		pkt_data.body.data = (PBYTE)stSendToken.GetData();
+		pkt_data.hdr.length = stSendToken.GetLength();
 		pkt_data.hdr.type = G_TYPE_LOG_DOC;
 		pkt_data.hdr.code = UINT16(pMFOI->nNextOp);
 

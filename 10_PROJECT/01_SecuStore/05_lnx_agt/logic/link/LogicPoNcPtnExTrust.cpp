@@ -63,9 +63,11 @@ INT32		CLogicPoNcPtnExTrust::AnalyzePkt_FromLink_Ext_Sync()
 void		CLogicPoNcPtnExTrust::SendPkt_Sync()
 {
 	{
+		m_tMutex.Lock();
 		t_ManagePoNcPtnExTrust->SetPkt(SendToken);
 		SendData_Link(m_nSessionID, G_TYPE_PO_NC_PTN_EX_TRUST, G_CODE_COMMON_SYNC, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

@@ -111,11 +111,12 @@ INT32		CLogicMgrHostSw::AnalyzePkt_FromMgr_Edit_Ext()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);	
 		t_ManageHostSw->SetPkt(SendToken);
-
 		SendData_Link(G_TYPE_HOST_SW, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return AZPKT_CB_RTN_SUCCESS_END;
@@ -202,12 +203,12 @@ void		CLogicMgrHostSw::SendPkt_HostSw()
 		WriteLogN("[%s] changed software item does not exist...", m_strLogicName.c_str());
 		return;
 	}
-
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostSw->SetPkt(tDBHostSwList, SendToken);
 	SendData_Mgr(G_TYPE_HOST_SW, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -278,9 +279,10 @@ void		CLogicMgrHostSw::SendPkt_HostSw_Cur()
 		WriteLogN("[%s] host software item does not exist...", m_strLogicName.c_str());
 		return;
 	}
-
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostSw->SetPkt(tDBHostSwList, SendToken);
 	SendData_Mgr(G_TYPE_HOST_SW, G_CODE_COMMON_SET, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }

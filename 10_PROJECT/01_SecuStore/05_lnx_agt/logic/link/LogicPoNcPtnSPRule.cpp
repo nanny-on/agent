@@ -132,9 +132,11 @@ INT32		CLogicPoNcPtnSPRule::AnalyzePkt_FromLink_Ext_Req()
 			return AZPKT_CB_RTN_SUCCESS_END;
 		}
 		{
+			m_tMutex.Lock();
 			t_ManagePoNcPtnSPRule->SetPkt(SendToken);
 			SendData_Link(G_TYPE_PO_NC_PTN_SP_RULE, G_CODE_COMMON_EDIT, SendToken);
 			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 
 		t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);

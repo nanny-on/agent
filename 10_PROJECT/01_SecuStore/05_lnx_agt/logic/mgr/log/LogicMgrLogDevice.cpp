@@ -156,6 +156,7 @@ void		CLogicMgrLogDevice::SetLogDevice(DB_LOG_DEVICE& dls)
 	}
 
 	{	
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogDevice->SetPkt(&dls, SendToken);
@@ -168,6 +169,7 @@ void		CLogicMgrLogDevice::SetLogDevice(DB_LOG_DEVICE& dls)
 			SendData_Link(G_TYPE_LOG_DEVICE, G_CODE_COMMON_SYNC, SendToken);
 		}
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -196,6 +198,7 @@ void		CLogicMgrLogDevice::SendPkt_Sync(INT32 nOnceMaxNum)
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
 
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -206,7 +209,8 @@ void		CLogicMgrLogDevice::SendPkt_Sync(INT32 nOnceMaxNum)
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_LOG_DEVICE, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

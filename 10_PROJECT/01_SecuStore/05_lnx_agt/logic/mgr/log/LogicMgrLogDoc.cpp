@@ -401,26 +401,25 @@ void		CLogicMgrLogDoc::SetLogDoc(DB_LOG_DOC& dld)
 		}
 	}
 	
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogDoc->SetPkt(&dld, SendToken);
 		if(!ISSYNCSTEP(dld.nSyncSvrStep) && !(dld.nSkipTarget & SS_ENV_LOG_OPTION_FLAGE_SKIP_SAVE_SERVER))
 		{
 			nRetVal = SendData_Mgr(G_TYPE_LOG_DOC, G_CODE_COMMON_SYNC, SendToken);
-			if(nRetVal == 0)
-				WriteLogN("[%s] send data log doc (%s)", m_strLogicName.c_str(), dld.strObjectPath.c_str());
-			else
-				WriteLogE("[%s] fail to send data log doc (%s) (%d)", m_strLogicName.c_str(), dld.strObjectPath.c_str(), nRetVal);
 		}
 		SendToken.Clear();
-		
+		m_tMutex.UnLock();
+/*		
 		{
 			SendToken.TokenAdd_32(1);
 			t_ManageLogDoc->SetPkt_Link(&dld, SendToken);
 			SendData_Link(G_TYPE_LOG_DOC, G_CODE_COMMON_SYNC, SendToken);
 			SendToken.Clear();
 		}
+*/
 	}
 	return;
 }
@@ -613,22 +612,18 @@ void		CLogicMgrLogDoc::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < tSendList.size())
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
 		{
 			t_ManageLogDoc->SetPkt((PDB_LOG_DOC)(*begin), SendToken);
-
 			nSendNum += 1;
 			nOnceNum -= 1;
 		}
-
 		nRetVal = SendData_Mgr(G_TYPE_LOG_DOC, G_CODE_COMMON_SYNC, SendToken);
-		if(nRetVal == 0)
-			WriteLogN("[SendPkt_Sync] send sync data log doc (%d)", nSendNum);
-
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

@@ -129,10 +129,12 @@ INT32		CLogicMgrEnvSocket::Send_KeepAlive()
 	t_EnvInfoOp->GetMgrSvrAuthStatus(nMgrSvrAuthStatus);
 	if(nMgrSvrAuthStatus == CLIENT_CON_STATUS_CONNECTED)
 	{
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(1);
 		SendData_Mgr(G_TYPE_ENV_SOCKET, G_CODE_COMMON_KEEPALIVE, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 		/*WriteLogN("send keep alive packet");*/
 	}
 

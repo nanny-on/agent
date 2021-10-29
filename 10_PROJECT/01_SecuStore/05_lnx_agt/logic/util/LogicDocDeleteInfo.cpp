@@ -50,9 +50,11 @@ void	CLogicDocDeleteInfo::SendPkt_DocDeleteInfo_Edit()
 {
 	DB_DOC_DELETE_INFO data;
 	t_ManageDocDeleteInfo->GetData(data);
+	m_tMutex.Lock();
 	t_ManageDocDeleteInfo->SetPkt(&data, SendToken);
 	SendData_Mgr(G_TYPE_HOST_STATUS, G_CODE_HOST_SET_DOC_DEL_INFO, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

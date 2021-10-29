@@ -111,11 +111,12 @@ INT32		CLogicMgrHostHw::AnalyzePkt_FromMgr_Edit_Ext()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);	
 		t_ManageHostHw->SetPktHost(pdhh, SendToken);
-
 		SendData_Link(G_TYPE_HOST_HW, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return AZPKT_CB_RTN_SUCCESS_END;
 }
@@ -201,11 +202,12 @@ void		CLogicMgrHostHw::SendPkt_HostHw(BOOL bCheck)
 		}
 	}
 SEND_PKT:
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostHw->SetPkt(&dhh, SendToken);
 	SendData_Mgr(G_TYPE_HOST_HW, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

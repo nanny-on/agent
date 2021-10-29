@@ -146,9 +146,11 @@ INT32		CLogicMgrPoInPtnSPRule::AnalyzePkt_FromMgr_Ext_Sync()
 		}
 
 		{
+			m_tMutex.Lock();
 			t_ManagePoInPtnSPRule->SetPkt(SendToken);
 			SendData_Link(G_TYPE_PO_IN_PTN_SP_RULE, G_CODE_COMMON_EDIT, SendToken);
 			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 
 		{
@@ -201,9 +203,11 @@ INT32		CLogicMgrPoInPtnSPRule::OnTimer_Logic()
 
 	if(nChgMode)
 	{
+		m_tMutex.Lock();
 		t_ManagePoInPtnSPRule->SetPkt(SendToken);
 		SendData_Link(G_TYPE_PO_IN_PTN_SP_RULE, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return 0;
 }
@@ -224,11 +228,13 @@ INT32		CLogicMgrPoInPtnSPRule::OnTimer_Logic()
 //---------------------------------------------------------------------------
 
 void		CLogicMgrPoInPtnSPRule::SendPkt_Req(PDB_PO_IN_PTN_SP_RULE pdata)
-{	
+{
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManagePoInPtnSPRule->SetPkt(pdata, SendToken);
 	SendData_Mgr(G_TYPE_PO_IN_PTN_SP_RULE, G_CODE_COMMON_REQUEST, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -251,7 +257,7 @@ void		CLogicMgrPoInPtnSPRule::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < tSendList.size())
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -262,7 +268,8 @@ void		CLogicMgrPoInPtnSPRule::SendPkt_Sync(INT32 nOnceMaxNum)
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_PO_IN_PTN_SP_RULE, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

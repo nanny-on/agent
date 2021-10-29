@@ -81,8 +81,10 @@ void	CLogicBase::SetDLEH_EC(UINT32 nErrCode, INT32 nApplyPkt)
 
 	if(nApplyPkt)
 	{
-		SendToken.Clear();
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(nErrCode);
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

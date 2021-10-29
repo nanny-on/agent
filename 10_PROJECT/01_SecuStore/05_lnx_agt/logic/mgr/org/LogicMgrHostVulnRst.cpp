@@ -116,10 +116,12 @@ INT32		CLogicMgrHostVulnRst::AnalyzePkt_FromMgr_Edit_Ext()
 		begin = m_tSendIDList.begin();	end = m_tSendIDList.end();
 		for(begin; begin != end; begin++)
 		{
+			m_tMutex.Lock();
 			SendToken.TokenAdd_32(ERR_SUCCESS);
 			t_ManageHostVulnRst->SetPkt_Link(*begin, SendToken);
 			SendData_Link(G_TYPE_HOST_VULN_RST, G_CODE_COMMON_SYNC, SendToken);
 			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 	}
 
@@ -143,6 +145,7 @@ void		CLogicMgrHostVulnRst::SetHostVulnRst(DB_HOST_VULN_RST& data)
 	}
 
 	{	
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageHostVulnRst->SetPkt(&data, SendToken);
@@ -157,6 +160,7 @@ void		CLogicMgrHostVulnRst::SetHostVulnRst(DB_HOST_VULN_RST& data)
 			SendData_Link(G_TYPE_HOST_VULN_RST, G_CODE_COMMON_SYNC, SendToken);
 			SendToken.Clear();
 		}
+		m_tMutex.UnLock();
 	}
 	return;
 }

@@ -795,6 +795,7 @@ VOID		CLogicMgrPoFaClear::cbDriveInfoList(PASIDM_LOCAL_DRIVE_INFO pamldi, INT32 
 //---------------------------------------------------------------------------
 INT32		CLogicMgrPoFaClear::ApplyPolicy_SendLastChkTime(INT32 nUnitID)
 {	
+	m_tMutex.Lock();
 	SendToken.Clear();
 
 	SendToken.TokenAdd_32(nUnitID);
@@ -802,6 +803,7 @@ INT32		CLogicMgrPoFaClear::ApplyPolicy_SendLastChkTime(INT32 nUnitID)
 
 	SendData_Link(G_TYPE_PO_FA_CLEAR, G_CODE_COMMON_APPLY, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return 0;
 }
 //---------------------------------------------------------------------------

@@ -123,10 +123,12 @@ INT32		CLogicMgrHost::AnalyzePkt_FromMgr_Edit_Ext()
 			return AZPKT_CB_RTN_SUCCESS_END;
 		}
 
-		{		
+		{
+			m_tMutex.Lock();
 			t_ManageHost->SetPktHost(SendToken);
 			SendData_Link(G_TYPE_HOST, G_CODE_COMMON_EDIT, SendToken);
 			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 	}	
 	return AZPKT_CB_RTN_SUCCESS_END;
@@ -278,11 +280,12 @@ void		CLogicMgrHost::SendPkt_Edit()
 	if(!nSendPkt)	return;
 
 SEND_PKT:
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHost->SetPktHost(&dh, SendToken);
 	SendData_Mgr(G_TYPE_HOST, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -313,11 +316,12 @@ void		CLogicMgrHost::SendPkt_InIt()
 	}
 
 SEND_PKT:
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHost->SetPktHost(&dh, SendToken);
 	SendData_Mgr(G_TYPE_HOST, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -351,7 +355,9 @@ void		CLogicMgrHost::SetUninstallHost()
 
 void		CLogicMgrHost::SendPkt_SyncEnd()
 {
+	m_tMutex.Lock();
 	SendToken.Clear();
 	SendToken.TokenAdd_32(m_nSessionID);
 	SendData_Mgr(G_TYPE_HOST, G_CODE_COMMON_SYNC_END, SendToken);
+	m_tMutex.UnLock();
 }

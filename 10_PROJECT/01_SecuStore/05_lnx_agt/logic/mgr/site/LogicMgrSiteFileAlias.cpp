@@ -214,62 +214,25 @@ void		CLogicMgrSiteFileAlias::CheckSiteFileAlias(PDB_SITE_FILE_ALIAS pdata_src)
 void		CLogicMgrSiteFileAlias::SetSiteFileAlias(DB_SITE_FILE_ALIAS& data)
 {
 //	INT32 nOldItem = data.nID;
+	BOOL bSendServer = FALSE;
 	t_ManageSiteFileAlias->ApplySiteFileAlias(data);
-	
-	{	
-		SendToken.Set(1024);
-		SendToken.TokenAdd_32(1);
-		t_ManageSiteFileAlias->SetPkt(&data, SendToken);
-/*
-		if(!nOldItem)
-		{
-			t_ASIEPSAPPDLLUtil->AddSiteFileAlias(SendToken.GetData(), SendToken.GetLength());			
-		}
-*/
-		do 
-		{
-/*
-			{
-				PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
-				if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-							((data.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-*/
-			{
-				PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
-				if(pdata && 
-					(pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-					((data.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					WriteLogN("[%s] remain site alias file to server : fp[%s/%s] key[%s]", m_strLogicName.c_str(), data.strFilePath.c_str(), data.strFileName.c_str(), data.strFeKey.c_str());
-					SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-/*
-			{
-				PDB_PO_NC_PTN_OP pdata = (PDB_PO_NC_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_NC_PTN_OP);
-				if(pdata && 
-					(pdata->nRTFGMode & SS_PO_NC_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
-					((data.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
-				{
-					SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-					break;
-				}
-			}
-*/
-		} while (FALSE);
-
-		SendToken.Clear();
-	}
-
+	PDB_PO_FE_PTN_OP pdata = (PDB_PO_FE_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_FE_PTN_OP);
+	if(pdata && (pdata->nNewFileSendType & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && 
+		((data.nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
 	{
-
+		bSendServer = TRUE;
+		WriteLogN("[%s] remain site alias file to server : fp[%s/%s] key[%s]", m_strLogicName.c_str(), data.strFilePath.c_str(), data.strFileName.c_str(), data.strFeKey.c_str());
 	}
+	m_tMutex.Lock();
+	SendToken.Set(1024);
+	SendToken.TokenAdd_32(1);
+	t_ManageSiteFileAlias->SetPkt(&data, SendToken);
+	if(bSendServer == TRUE)
+	{
+		SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
+	}
+	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -297,6 +260,7 @@ void		CLogicMgrSiteFileAlias::SendPkt_Sync(INT32 nOnceMaxNum)
 	{
 		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
 
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -312,9 +276,9 @@ void		CLogicMgrSiteFileAlias::SendPkt_Sync(INT32 nOnceMaxNum)
 		if(nSendNum != 0)
 		{
 			SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-			SendToken.Clear();
-			WriteLogN("[%s] send to sync site alias file : send[%d]", m_strLogicName.c_str(), nSendNum);
 		}
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -342,7 +306,7 @@ void		CLogicMgrSiteFileAlias::SendPkt_ReSend(INT32 nOnceMaxNum)
 	while(nSendNum < nListCount)
 	{
 		nOnceNum = (((nListCount - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (nListCount - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -357,9 +321,9 @@ void		CLogicMgrSiteFileAlias::SendPkt_ReSend(INT32 nOnceMaxNum)
 		if(nSendNum != 0)
 		{
 			SendData_Mgr(G_TYPE_SITE_FILE_ALIAS, G_CODE_COMMON_SYNC, SendToken);
-			SendToken.Clear();
-			WriteLogN("[%s] resend to site alias file : send[%d]", m_strLogicName.c_str(), nSendNum);
 		}
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	return;

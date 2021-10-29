@@ -259,8 +259,7 @@ void		CLogicLgnAuth::SendAuthReg()
 	int i, nCount = 0;
 	BOOL bMatch = FALSE;
 	String strCurIP = GetConnectAddr_Lgn();
-	SendToken.Clear();
-
+	
 	nCount = t_NetworkDLLUtil->GetInterfaceCount();
 	if(nCount < 1)
 	{
@@ -306,15 +305,15 @@ void		CLogicLgnAuth::SendAuthReg()
 
 	if (t_EnvInfo->m_strHostKey.empty())
 		t_EnvInfo->SetReg_HostKey(GetGUID());
-
+	m_tMutex.Lock();
+	SendToken.Clear();
 	SendToken.TokenAdd_String(t_EnvInfo->m_strHostKey);
 	SendToken.TokenAdd_String(strMacAddr);
 	SendToken.TokenAdd_String(t_EnvInfoOp->GetComputerName());
-
 	SendToken.TokenAdd_String(szIPAddr);
-
 	SendData_Lgn(AL_TYPE_AUTH, AL_CODE_AUTH_REG, SendToken);
-
+	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -328,7 +327,6 @@ void		CLogicLgnAuth::SendAuthLogin()
 	String strMacAddr;
 	String strCurIP = GetConnectAddr_Lgn();
 
-	SendToken.Clear();
 
 	nCount = t_NetworkDLLUtil->GetInterfaceCount();
 	if(nCount < 1)
@@ -376,7 +374,8 @@ void		CLogicLgnAuth::SendAuthLogin()
 	t_EnvInfoOp->m_strPriMacAddr = strMacAddr;
 
 	WriteLogN("[%s] login current net hardware info : [%s][%s]", m_strLogicName.c_str(), szIPAddr, strMacAddr.c_str());
-
+	m_tMutex.Lock();
+	SendToken.Clear();
 	SendToken.TokenAdd_String(t_EnvInfo->m_strHostKey);
 	SendToken.TokenAdd_String(t_EnvInfoOp->m_strPriMacAddr);
 	SendToken.TokenAdd_String(t_EnvInfoOp->m_strPriIPAddr);
@@ -384,9 +383,9 @@ void		CLogicLgnAuth::SendAuthLogin()
 	SendToken.TokenAdd_String(t_EnvInfo->m_strHostPtnVer);
 	//linux/windows ±¸ºÐÀÚ
 	SendToken.TokenAdd_32(BIN_MODULE_RUN_TYPE);
-
 	SendData_Lgn(AL_TYPE_AUTH, AL_CODE_AUTH_LOGIN, SendToken);
-
+	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

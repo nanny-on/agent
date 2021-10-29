@@ -170,7 +170,8 @@ void		CLogicMgrLogSecu::SetLogSecu(DB_LOG_SECU& dls)
 		t_ManageLogSecu->AddLogSecu(dls);
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogSecu->SetPkt(&dls, SendToken);
@@ -178,13 +179,12 @@ void		CLogicMgrLogSecu::SetLogSecu(DB_LOG_SECU& dls)
 		{
 			SendData_Mgr(G_TYPE_LOG_SECU, G_CODE_COMMON_SYNC, SendToken);
 		}
-/*
 		if(!(dls.nSkipTarget & SS_ENV_LOG_OPTION_FLAGE_SKIP_SAVE_AGENT))		
 		{
 			SendData_Link(G_TYPE_LOG_SECU, G_CODE_COMMON_SYNC, SendToken);
 		}
-*/
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -212,7 +212,7 @@ void		CLogicMgrLogSecu::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < tSendList.size())
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -223,7 +223,8 @@ void		CLogicMgrLogSecu::SendPkt_Sync(INT32 nOnceMaxNum)
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_LOG_SECU, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

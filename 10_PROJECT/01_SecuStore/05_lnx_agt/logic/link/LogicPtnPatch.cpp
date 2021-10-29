@@ -61,9 +61,10 @@ void		CLogicPtnPatch::SendPkt_Sync()
 {
 	TMapID tIDMap;
 	t_ManageLinkEnv->GetKeyIDMap(G_TYPE_PTN_PATCH, tIDMap);
-
+	m_tMutex.Lock();
 	SendData_Link(G_TYPE_PTN_PATCH, G_CODE_COMMON_SYNC, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 

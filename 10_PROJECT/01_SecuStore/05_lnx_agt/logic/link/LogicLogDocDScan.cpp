@@ -68,15 +68,27 @@ INT32		CLogicLogDocDScan::AnalyzePkt_FromLink_Ext_Scan()
 	DB_PO_FA_CLEAR_UNIT tDPFCU;
 	MEM_FIND_ORDER_INFO tMFOI;
 
-	if(t_ManageLogDocDScan->GetPkt(RecvToken, dldd))	goto INVALID_PKT;
-
+	if(t_ManageLogDocDScan->GetPkt(RecvToken, dldd))
+	{
+		m_tMutex.Lock();
+		SendToken.TokenAdd_32(ERR_SOCKET_CLT_TO_SVR_INVALID_PKT);
+		SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_SCAN, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		WriteLogE("[%s] recv invalid pkt from kernel : [%s][%x]:[%x]", m_strLogicName.c_str(), Int64ToHex(m_nPktType).c_str(), m_nPktCode, m_nDbgPos);
+		return 0;
+	}
 	{
 		dldd.nRegDate = GetCurrentDateTimeInt();
 		if(SetER(t_ManageLogDocDScan->AddLogDocDScan(dldd)))
 		{
 			SetDLEH_EC(g_nErrRtn);
+			m_tMutex.Lock();
+			SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_SCAN, SendToken);
+			SendToken.Clear();
+			m_tMutex.UnLock();
 			WriteLogE("[%s] doc demand scan add fail : [%d]", m_strLogicName.c_str(), g_nErrRtn);
-			goto SEND_PKT;
+			return 0;
 		}
 		
 		{
@@ -102,30 +114,25 @@ INT32		CLogicLogDocDScan::AnalyzePkt_FromLink_Ext_Scan()
 		{
 			if(t_LogicMgrPoFaClear->ApplyPolicy_Unit(&tDPFCU, tMFOI))
 			{
+				m_tMutex.Lock();
 				SendToken.TokenAdd_32(ERR_INFO_NOT_OP_BECAUSE_INVALID_SET_ENV);
-				goto SEND_PKT;
+				SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_SCAN, SendToken);
+				SendToken.Clear();
+				m_tMutex.UnLock();
+				return 0;
 			}
 		}
 		
 		{
+			m_tMutex.Lock();
 			SendToken.TokenAdd_32(ERR_SUCCESS);
 			SendToken.TokenAdd_32(tMFOI.nID);
-			t_ManageLogDocDScan->SetPkt(&dldd, SendToken);			
+			t_ManageLogDocDScan->SetPkt(&dldd, SendToken);		
+			SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_SCAN, SendToken);
+			SendToken.Clear();
+			m_tMutex.UnLock();
 		}
 	}
-	goto SEND_PKT;
-
-INVALID_PKT:
-	SendToken.TokenAdd_32(ERR_SOCKET_CLT_TO_SVR_INVALID_PKT);
-	WriteLogE("[%s] recv invalid pkt from kernel : [%s][%x]:[%x]", m_strLogicName.c_str(), Int64ToHex(m_nPktType).c_str(), m_nPktCode, m_nDbgPos);
-	
-SEND_PKT:
-	SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_SCAN, SendToken);
-	SendToken.Clear();
-
-	goto OP_END;
-
-OP_END:
 	return 0;
 }
 //---------------------------------------------------------------------------
@@ -160,41 +167,48 @@ OP_END:
 
 void		CLogicLogDocDScan::SendPkt_Find(PDB_LOG_DOC pdld)
 {
+	m_tMutex.Lock();
 	SendToken.Set(1024);
 	SendToken.TokenAdd_32(1);
 	t_ManageLogDoc->SetPkt_Link(pdld, SendToken);
 	SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_FIND, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------
 
 void		CLogicLogDocDScan::SendPkt_Progress(PMEM_FIND_ORDER_INFO pMFOI)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(pMFOI->nID);
 	SendToken.TokenAdd_32(pMFOI->nNotiPgTotal);
 	SendToken.TokenAdd_32(pMFOI->nNotiPgEnd);
-
 	SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_PROGRESS, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicLogDocDScan::SendPkt_End(MEM_FIND_ORDER_INFO& tMFOI)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(tMFOI.nID);
 	SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_END, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
 
 void		CLogicLogDocDScan::SendPkt_Del_Last(MEM_FIND_ORDER_INFO& tMFOI)
 {
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(tMFOI.nPoID);
 	SendToken.TokenAdd_32(tMFOI.nOpType);
 	SendToken.TokenAdd_32(tMFOI.nNotiTotalFind);
 	SendData_Link(G_TYPE_LOG_DOC_DSCAN, G_CODE_COMMON_LAST, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 }
 //---------------------------------------------------------------------------

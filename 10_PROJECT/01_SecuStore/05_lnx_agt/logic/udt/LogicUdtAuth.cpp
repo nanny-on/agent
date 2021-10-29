@@ -154,15 +154,14 @@ INVALID_AUTH_PKT:
 
 void		CLogicUdtAuth::SendAuthLogin()
 {
-	SendToken.Clear();
-
 	WriteLogN("[%s] udt current info : [%s]", m_strLogicName.c_str(), t_EnvInfo->m_strHostKey.c_str());
-
+	m_tMutex.Lock();
+	SendToken.Clear();
 	SendToken.TokenAdd_String(t_EnvInfo->m_strHostKey);
 	SendToken.TokenAdd_32(BIN_MODULE_RUN_TYPE);
 
 	SendData_Udt(AU_TYPE_AUTH, AU_CODE_AUTH_LOGIN, SendToken);
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

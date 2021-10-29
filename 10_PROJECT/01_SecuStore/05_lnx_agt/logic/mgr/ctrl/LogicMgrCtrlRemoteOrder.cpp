@@ -231,9 +231,11 @@ INT32		CLogicMgrCtrlRemoteOrder::ApplyRemotePolicy_NPScan(PMEM_CTRL_REMOTE_ORDER
 INT32		CLogicMgrCtrlRemoteOrder::ApplyRemotePolicy_NO_VUINScan(PMEM_CTRL_REMOTE_ORDER pMCRO)
 {
 	WriteLogN("start remote ctrl : po no vuin scan : [%d]", pMCRO->nOption);		
+	m_tMutex.Lock();
 	SendToken.TokenAdd_32(pMCRO->nOption);
 	SendData_Link(G_TYPE_PO_IN_VULN_REMOTE_SCAN, G_CODE_COMMON_SCAN, SendToken);
 	SendToken.Clear();
+	m_tMutex.UnLock();
 	return AZPKT_CB_RTN_SUCCESS;
 }
 //---------------------------------------------------------------------------

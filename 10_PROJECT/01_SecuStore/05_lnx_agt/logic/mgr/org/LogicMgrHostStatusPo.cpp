@@ -128,11 +128,12 @@ INT32		CLogicMgrHostStatusPo::AnalyzePkt_FromMgr_Edit_Ext()
 	}
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);	
 		t_ManageHostStatusPo->SetPkt(&dhsp_old, SendToken);
-
 		SendData_Link(m_nPktType, G_CODE_COMMON_EDIT, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return AZPKT_CB_RTN_SUCCESS_END;
 }
@@ -182,12 +183,12 @@ void		CLogicMgrHostStatusPo::SendPkt_HostStatusPo(DB_HOST_STATUS_PO dhsp)
 
 	if(!nSendPkt)	return;
 
-
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostStatusPo->SetPkt(&dhsp, SendToken);
 	SendData_Mgr(G_TYPE_HOST_STATUS_PO, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------
@@ -200,12 +201,12 @@ void		CLogicMgrHostStatusPo::SendPkt_HostStatusPo()
 		WriteLogE("[%s] not find host status po first item", m_strLogicName.c_str());
 		return;
 	}	
-
+	m_tMutex.Lock();
 	SendToken.Clear();
 	t_ManageHostStatusPo->SetPkt(pdhsp, SendToken);
 	SendData_Mgr(G_TYPE_HOST_STATUS_PO, G_CODE_COMMON_EDIT, SendToken);
 	SendToken.Clear();
-
+	m_tMutex.UnLock();
 	return;
 }
 //---------------------------------------------------------------------------

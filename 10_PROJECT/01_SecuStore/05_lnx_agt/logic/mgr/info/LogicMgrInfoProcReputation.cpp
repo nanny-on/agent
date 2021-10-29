@@ -221,10 +221,11 @@ INT32		CLogicMgrInfoProcReputation::OnTimer_Logic()
 
 	if(t_ManageProcessInfo->Count())
 	{
+		m_tMutex.Lock();
 		t_ManageProcessInfo->SetPkt(SendToken);
 		SendData_Link(G_TYPE_INFO_PROC_REPUTATION, G_CODE_COMMON_SYNC, SendToken);
 		SendToken.Clear();
-
+		m_tMutex.UnLock();
 		SendPkt_Sync();
 	}
 	return 0;
@@ -268,6 +269,7 @@ void		CLogicMgrInfoProcReputation::SendPkt_Sync()
 	if(tSendList.size() == 0)		return;
 
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(tSendList.size());
 
 		TListDBInfoProcReputationItor begin, end;
@@ -276,10 +278,12 @@ void		CLogicMgrInfoProcReputation::SendPkt_Sync()
 		{
 			t_ManageInfoProcReputation->SetPkt(&(*begin), SendToken);
 		}
+		SendData_Mgr(G_TYPE_INFO_PROC_REPUTATION, G_CODE_COMMON_SYNC, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}	
 
-	SendData_Mgr(G_TYPE_INFO_PROC_REPUTATION, G_CODE_COMMON_SYNC, SendToken);
-	SendToken.Clear();		
+
 }
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------

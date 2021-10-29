@@ -174,7 +174,9 @@ void		CLogicMgrLogRs::SetLogRs(DB_LOG_RS& data)
 		t_ManageLogRs->AddLogRs(data);
 	}
 
-	{	
+	{
+		m_tMutex.Lock();
+
 		SendToken.Set(1024);
 		SendToken.TokenAdd_32(1);
 		t_ManageLogRs->SetPkt(&data, SendToken);
@@ -187,6 +189,7 @@ void		CLogicMgrLogRs::SetLogRs(DB_LOG_RS& data)
 			SendData_Link(G_TYPE_LOG_RS, G_CODE_COMMON_SYNC, SendToken);
 		}
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }
@@ -214,7 +217,7 @@ void		CLogicMgrLogRs::SendPkt_Sync(INT32 nOnceMaxNum)
 	while(nSendNum < tSendList.size())
 	{
 		nOnceNum = (((tSendList.size() - nSendNum) > nOnceMaxNum && nOnceMaxNum > 0) ? nOnceMaxNum : (tSendList.size() - nSendNum));
-
+		m_tMutex.Lock();
 		SendToken.Clear();
 		SendToken.TokenAdd_32(nOnceNum);
 		for(begin; begin != end && nOnceNum; begin++)
@@ -225,7 +228,8 @@ void		CLogicMgrLogRs::SendPkt_Sync(INT32 nOnceMaxNum)
 			nOnceNum -= 1;
 		}
 		SendData_Mgr(G_TYPE_LOG_RS, G_CODE_COMMON_SYNC, SendToken);
-		SendToken.Clear();		
+		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 	return;
 }

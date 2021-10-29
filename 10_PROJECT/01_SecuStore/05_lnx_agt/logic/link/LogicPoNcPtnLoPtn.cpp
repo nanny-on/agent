@@ -90,9 +90,11 @@ INT32		CLogicPoNcPtnLoPtn::AnalyzePkt_FromLink_Add_Ext()
 		}
 	}	
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);
 		SendData_Link(m_nPktType, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	{
@@ -136,10 +138,12 @@ INT32		CLogicPoNcPtnLoPtn::AnalyzePkt_FromLink_Del_Ext()
 		}
 	}	
 	{
+		m_tMutex.Lock();
 		SendToken.TokenAdd_32(ERR_SUCCESS);
 		SendToken.TokenAdd_IDList(m_tSendIDList);
 		SendData_Link(m_nPktType, m_nPktCode, SendToken);
 		SendToken.Clear();
+		m_tMutex.UnLock();
 	}
 
 	{
