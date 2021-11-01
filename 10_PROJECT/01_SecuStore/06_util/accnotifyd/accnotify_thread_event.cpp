@@ -237,8 +237,18 @@ INT32 CThreadAccNotifyEvent::Run()
 	char *pcBuffer = NULL;
 	PASI_CHK_FILE_PROC pChkFileProc = NULL;
 	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
+	pid_t tid = 0;
+	for(i=0; i<30; i++)
+	{
+		if(check_proc_exist_by_name(NANNY_AGENT_IDENT, 0) == ASI_PROC_EXIST)
+		{
+			Sleep(1000);
+			break;
+		}
+		Sleep(1000);
+	}
 
-	pid_t tid = syscall(SYS_gettid);
+	tid = syscall(SYS_gettid);
 	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
 	if(nRetVal < 0)
 	{

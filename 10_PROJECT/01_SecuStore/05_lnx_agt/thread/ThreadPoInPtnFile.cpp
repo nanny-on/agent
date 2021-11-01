@@ -1139,31 +1139,71 @@ VOID	CThreadPoInPtnFile::SetLogCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
 	INT32 i, nRetVal = 0;
 	DWORD dwFileType = AS_INVALID_FILE;
+#ifdef _PERP_TEST_LOG
+	BOOL bIsTestPgm = FALSE;
+	double fDiffTime = 0;
+	struct timeval stStartTime;
+#endif
 	if(pChkPtnFile == NULL)
 	{
 		return;
 	}
 	if(t_LogicMgrSiteFile != NULL)
 	{
-		if(pChkPtnFile->stAWWE.acWhiteHash[0] == 0)
+#ifdef _PERP_TEST_LOG
+		if(!_strnicmp(pChkPtnFile->stCHKFILE.stFileInfo.acFile, "tc5_file_", 9))
 		{
-			for(i=0; i<3; i++)
+			bIsTestPgm = TRUE;
+		}
+#endif
+		for(i=0; i<3; i++)
+		{
+#ifdef _PERP_TEST_LOG
+			if(bIsTestPgm == TRUE)
 			{
-				nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
-				if(nRetVal == 0 || dwFileType != AS_INVALID_FILE)
-				{
-					break;
-				}
-				Sleep(300);
+				gettimeofday(&stStartTime, NULL);
 			}
+#endif
+			nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
+			if(nRetVal == 0 || dwFileType != AS_INVALID_FILE)
+			{
+				break;
+			}
+			Sleep(100);
 		}
 		if(pChkPtnFile->stAWWE.acWhiteHash[0] == 0)
 		{
 			return;
 		}
+
 		strncpy(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash, pChkPtnFile->stAWWE.acWhiteHash, SHA512_BLOCK_SIZE+1);
 		pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
 		t_LogicMgrSiteFile->CheckSiteCreateFile(&pChkPtnFile->stCHKFILE);
+
+#ifdef _PERP_TEST_LOG
+		if(bIsTestPgm == TRUE)
+		{
+			fDiffTime = diff_time(stStartTime);
+			UINT32 nTime = (UINT32)time(NULL);
+			if(nTime - m_nTestTime > 30)
+			{
+				m_nTestCount = 0;
+				m_fTotalDiffTime = 0;
+			}
+			else
+				m_nTestCount++;
+			m_nTestTime = nTime;
+			m_fTotalDiffTime += fDiffTime;
+			WritePerfTest5Log("[%03d]\ttest the interval time for detection of created file [%s] [detection time : %.02f ms]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, fDiffTime/1000);
+			if(m_nTestCount == 19)
+			{
+				fDiffTime = m_fTotalDiffTime/20;
+				WritePerfTest5Log("[total]\ttest the interval time for detection of created file [total : %d files] [average time : %.02f ms]", m_nTestCount+1, fDiffTime/1000);
+			}
+		}
+#endif
+
+
 	}
 }
 

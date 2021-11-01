@@ -37,4 +37,5 @@ void	WritePerfTest1Log(char *fmt,...);
 void	WritePerfTest2Log(char *fmt,...);
 void	WritePerfTest3Log(char *fmt,...);
 void	WritePerfTest4Log(char *fmt,...);
+void	WritePerfTest5Log(char *fmt,...);
 #endif

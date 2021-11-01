@@ -396,12 +396,23 @@ INT32 CThreadFaNotifyEvent::Run()
 	INT32 nRetVal = 0;
 	INT32 nNotifyFd = -1;
 	INT32 nTestMode = 0;
-	INT32 nTestCount = 0;
+	INT32 i, nTestCount = 0;
 	INT32 nClientFd = -1;
 	char *pcBuffer = NULL;
 	PASI_CHK_FILE_PROC pChkFileProc;
 	CFaNotifyDlg* t_NotifyDlg = (CFaNotifyDlg *)m_pNotifyWnd;
-	pid_t tid = syscall(SYS_gettid);
+	pid_t tid = 0;
+
+	for(i=0; i<30; i++)
+	{
+		if(check_proc_exist_by_name(NANNY_AGENT_IDENT, 0) == ASI_PROC_EXIST)
+		{
+			Sleep(1000);
+			break;
+		}
+		Sleep(1000);
+	}
+	tid =syscall(SYS_gettid);
 	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
 	if(nRetVal < 0)
 	{
