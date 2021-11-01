@@ -233,7 +233,7 @@ INT32 CThreadAccNotifyEvent::Run()
 	INT32 nRetVal = 0;
 	INT32 nNotifyFd = -1;
 	INT32 nTestMode = 0;
-	INT32 nTestCount = 0;
+	INT32 i, nTestCount = 0;
 	char *pcBuffer = NULL;
 	PASI_CHK_FILE_PROC pChkFileProc = NULL;
 	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
