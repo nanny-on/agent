@@ -881,7 +881,7 @@ INT32		CThreadPoInPtnFile::ChkInPtnSP(char *pPath, char *pFile, char *pcFeKey, I
 		nIsWarning = 1;
 
 	PDB_PO_IN_PTN_SP pdata_sp = (PDB_PO_IN_PTN_SP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_SP);
-	if(pOpPolicy == NULL)
+	if(pdata_sp == NULL)
 		return 0;
 	UINT32 nPoUsedMode = pdata_sp->tDPH.nUsedMode;
 	UINT32 nExtOption = pdata_sp->tDPH.nExtOption;
