@@ -1,3 +1,5 @@
+# Contributing to Nanny-On Project
+
 How to contribute to Nanny-On Project
 -------------------------------------
 
