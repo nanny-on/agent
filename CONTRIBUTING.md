@@ -1,5 +1,7 @@
 # Contributing to Nanny-On Project
 
+We always welcome to consider contributing to Nanny-On Project.
+
 How to contribute to Nanny-On Project
 -------------------------------------
 
