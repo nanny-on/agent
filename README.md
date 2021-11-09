@@ -43,7 +43,7 @@ How to contribute to Nanny-On Project
 =====================================
 
 We always welcome to contribute our opensource project Nanny-On.
-For deatails, see [this].
+For details, see [this].
 
 [this]: <https://github.com/nanny-on/agent/blob/main/CONTRIBUTING.md>
 
