@@ -29,7 +29,7 @@ Actually, we have really focused on implementing whitelist-based application con
 Why Whitelist-based Application Control
 =======================================
 
-When it comes to malware infection, application controls will bring a variety of benefits to us.
+When it comes to prevention from malware infection, application controls will bring a variety of benefits to us.
 Firstly, you can protect your endpoints from zero-day attack by unkown malware. This is because application controls eanble your computer systems to execute only approved applications. In other word, excution of unauthorized programs including computer viruses will be blocked or suspended. 
 In addition, prvention from running useless processes not only makes resource management efficient, but improves produtivity.
 
