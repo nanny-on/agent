@@ -9,6 +9,8 @@ Nanny-On is an application control program taking advantage of adaptive whitelis
 Generally, application control programs enhance security features and availability of embedded systems such as POS, CD/ATM, ICS(Industrial Control System), etc.
 However, we wish to extend the target system to personal and server computers. Nanny-On project is to implement and maintain application control software for Linux kernels.
 
+![image](https://github.com/nanny-on/misc/blob/main/images/usecase.png)
+
 You are always welcomed to join this project.
 
 This project is sponsored by [NIPA] to promote Open Source Software development.  
