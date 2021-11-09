@@ -6,10 +6,8 @@ Welcome to Nanny-On Open Source Project
 =======================================
 
 Nanny-On is an application control program taking advantage of adaptive whitelisting technologies.
-Generally, application control programs enhance security features and availability of
-embedded systems such as POS, CD/ATM, ICS(Industrial Control System), etc.
-However, we wish to extend the target system to personal and server computers.
-Nanny-On project is to implement and maintain application control software for Linux kernels.
+Generally, application control programs enhance security features and availability of embedded systems such as POS, CD/ATM, ICS(Industrial Control System), etc.
+However, we wish to extend the target system to personal and server computers. Nanny-On project is to implement and maintain application control software for Linux kernels.
 
 You are always welcomed to join this project.
 
@@ -20,12 +18,28 @@ This project is sponsored by [NIPA] to promote Open Source Software development.
 Nanny-On: Next Generation Endpoint Security Protection
 ======================================================
 
-Endpoints are a primary target of cyber attacks. Nanny-On delivers the most complete endpoint security functionality
-using state-of-the-art technologies from preventing execution of unknown malware to hardening systems.
+Endpoints are a primary target of cyber attacks. Nanny-On delivers the most complete endpoint security functionality using state-of-the-art technologies from preventing execution of unknown malware to hardening systems.
 
-![image](https://github.com/nanny-on/agent/blob/main/nannyon_img.png)
+![image](https://github.com/nanny-on/misc/blob/main/images/nannyon_img.png)
 
+Actually, we have really focused on implementing whitelist-based application control on Linux systems. The reason why we've done it is to overcome the limitations of traditional anti-virus software using signature-based malware detection thechnologies(a.k.a. blacklist-based).
 
+![image](https://github.com/nanny-on/misc/blob/main/images/whitevsblack.png)
+
+Why Whitelist-based Application Control
+=======================================
+
+When it comes to malware infection, application controls will bring a variety of benefits to us.
+Firstly, you can protect your endpoints from zero-day attack by unkown malware. This is because application controls eanble your computer systems to execute only approved applications. In other word, excution of unauthorized programs including computer viruses will be blocked or suspended. 
+In addition, prvention from running useless processes not only makes resource management efficient, but improves produtivity.
+
+How to contribute to Nanny-On Project
+=====================================
+
+We always welcome to contribute our opensource project Nanny-On.
+For deatails, see [this].
+
+[this]: <https://github.com/nanny-on/agent/blob/main/CONTRIBUTING.md>
 
 License
 =======
