@@ -1,4 +1,4 @@
-# Contributing to Nanny-On Project
+# CONTRIBUTING TO NANNY-ON PROJECT
 
 Thank you for your consideration of contributing to Nanny-On Project.
 
