@@ -54,9 +54,12 @@ You may need some pre-installed development tools related to compile Nanny-On ag
 First of all, you have to install C/C++ compilers and "make" on your ubuntu system.
 
     sudo apt-get update
-    
     sudo apt-get install build-essential
 
-For the next step,
+For the next step, you should install SQLite as a DBMS tool. SQLite is simple, but powerful embedded SQL database engine. Unlike other database systems, SQLite does not need to run on a server, and all information is stored into a single file.
+
+    sudo apt-get install sqlite3 libsqlite3-dev
+
+
 
 
