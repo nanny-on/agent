@@ -3,7 +3,7 @@
 Thank you for your consideration of contributing to Nanny-On Project.
 
 How to contribute to Nanny-On Project
--------------------------------------
+=====================================
 
 Development is done on GitHub in the [nanny-on/agent] repository.
 
@@ -17,16 +17,15 @@ to get comments from the community.  Someone may be already working on
 the same thing or there may be reasons why that feature isn't implemented.
 
 Coding Style
-------------
+============
 
 We know that coding sytle is very personal. However, an open source project is likely to have a variety of members and contributors.
 To make sure effective communication between them, we hopefully recommend to comply with [Linux kernel coding style].
 
 [Linux kernel coding style]: <https://www.kernel.org/doc/Documentation/process/coding-style.rst>
 
-
 For Testing and Development
----------------------------
+===========================
 
 Although testing and development could in theory also be done using
 the source tarballs, having a local copy of the git repository with
@@ -46,9 +45,11 @@ If you intend to contribute to Nanny-On project, either to fix bugs or contribut
 new features, you need to fork the Nanny-On repository nanny-on/agent on
 GitHub and clone your public fork instead.
 
+How to build
+============
 
-Bofore Development
-==================
+Bofore Building
+---------------
 
 You may need some pre-installed development tools related to compile Nanny-On agent.
 First of all, you have to install C/C++ compilers and "make" on your ubuntu system.
