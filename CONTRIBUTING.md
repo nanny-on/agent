@@ -82,8 +82,6 @@ Now, you can see directory "agent" that is the local copy of the git repository 
    make
 
 If you have any questions or issues, please post the issues on GitHub in the [nanny-on/agent/issues] repository.
-  [nanny-on/agent/issues]: <https:github.com/nanny-on/agent/issues>
 
-
-
+  [nanny-on/agent/issues]: <https://github.com/nanny-on/agent/issues>
 
