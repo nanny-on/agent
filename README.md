@@ -36,7 +36,7 @@ Application whitelisting has been based on zero-trust concept(default-deny). Use
 ![image](https://github.com/nanny-on/misc/blob/main/images/trustmodel.png)
 
 When it comes to prevention from malware infection, application controls will bring a variety of benefits to us.
-Firstly, you can protect your endpoints from zero-day attack by unkown malware. This is because application controls eanble your computer systems to execute only approved applications. In other word, excution of unauthorized programs including computer viruses will be blocked or suspended. 
+Firstly, you can protect your endpoints from zero-day attack by unkown malware. This is because application controls eanble your computer systems to execute only approved applications. In other word, execution of unauthorized programs including computer viruses will be blocked or suspended. 
 In addition, prvention from running useless processes not only makes resource management efficient, but improves produtivity.
 
 How to contribute to Nanny-On Project
