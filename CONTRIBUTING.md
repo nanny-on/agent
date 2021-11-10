@@ -76,6 +76,14 @@ After installing git, you can clone Nanny-On agent source codes into your local 
     
     git clone git://github.com/nanny-on/agent.git
 
+Now, you can see directory "agent" that is the local copy of the git repository and just type "make". That's all!
+
+   cd agent
+   make
+
+If you have any questions or issues, please post the issues on GitHub in the [nanny-on/agent/issues] repository.
+  [nanny-on/agent/issues]: <https:github.com/nanny-on/agent/issues>
+
 
 
 
