@@ -45,7 +45,7 @@ If you intend to contribute to Nanny-On project, either to fix bugs or contribut
 new features, you need to fork the Nanny-On repository nanny-on/agent on
 GitHub and clone your public fork instead.
 
-How to build
+How to Build
 ============
 
 Bofore Building
@@ -60,6 +60,21 @@ First of all, you have to install C/C++ compilers and "make" on your ubuntu syst
 For the next step, you should install SQLite as a DBMS tool. SQLite is simple, but powerful embedded SQL database engine. Unlike other database systems, SQLite does not need to run on a server, and all information is stored into a single file.
 
     sudo apt-get install sqlite3 libsqlite3-dev
+
+The last step is to install UNIXODBC tool. UNIXODBC is an open specification for providing application developers with a predictable API with which to access Data Sources.
+
+    sudo apt-get install unixodbc unixodbc-dev
+
+Building Nanny-On agent
+-----------------------
+
+As we mentioned before, we strongly recommend to test and develop with a local copy of the git repository. Therefore you have to install 'git' on your ubuntu system.
+
+    sudo apt-get install git
+
+After installing git, you can clone Nanny-On agent source codes into your local system.
+    
+    git clone git://github.com/nanny-on/agent.git
 
 
 
