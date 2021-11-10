@@ -45,3 +45,17 @@ the original Nanny-On repository using
 If you intend to contribute to Nanny-On project, either to fix bugs or contribute
 new features, you need to fork the Nanny-On repository nanny-on/agent on
 GitHub and clone your public fork instead.
+
+
+Bofore Development
+==================
+
+You may need some pre-installed development tools related to compile Nanny-On agent.
+First of all, you have to install C/C++ compilers and "make" on your ubuntu system.
+
+    sudo apt-get update
+    sudo apt-get install build-essential
+
+For the next step,
+
+
