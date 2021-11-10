@@ -54,6 +54,7 @@ You may need some pre-installed development tools related to compile Nanny-On ag
 First of all, you have to install C/C++ compilers and "make" on your ubuntu system.
 
     sudo apt-get update
+    
     sudo apt-get install build-essential
 
 For the next step,
