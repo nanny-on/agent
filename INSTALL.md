@@ -101,7 +101,8 @@ file, use the following steps to install it.
   After the process is complete, the installer will print a success message.
   
  
-    ```[*] Installation is done.```
+   ```[*] Installation is done.```
+    
 
 # Uninstalling 
 
