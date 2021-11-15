@@ -19,7 +19,7 @@ file, use the following steps to install it.
    
    This will create a `media` directory
 
-3. In the `media` directory, execute the `nanny_install.sh` script:
+3. In the `media` directory, execute the `nanny_install.sh` script: <br>
 
    ```sudo ./nanny_install.sh```
 
@@ -52,7 +52,7 @@ file, use the following steps to install it.
     Unixodbc pkg is installed.
    ```
   
-  4. To set logon server information, enter the logon server ip and port information:
+  4. To set logon server information, enter the logon server ip and port information: <br>
 
    ```bash
     [*] Set logon server infomation.
@@ -72,7 +72,7 @@ file, use the following steps to install it.
      > Is it correct? [Y/n] y
    ```
   
- 5. The final step in the process is to install files and set agent environments.
+ 5. The final step in the process is to install files and set agent environments. <br>
 
    ```bash
     [*] Create nanny agent infomation file.
@@ -98,7 +98,7 @@ file, use the following steps to install it.
     [*] Setup init acccntl scripts.
    ```
   
- 6. After the process is complete, the installer will print a success message.
+ 6. After the process is complete, the installer will print a success message. <br>
   
  
    ```[*] Installation is done.```
@@ -108,7 +108,7 @@ file, use the following steps to install it.
 
 If you want to uninstall the release, run the `nanny_uninstall.sh` script.
 
-    /usr/local/ashin/nanny/inst/nanny_uninstall.sh
+   ```/usr/local/ashin/nanny/inst/nanny_uninstall.sh```
 
 This will revert all changes made by the `install.sh` script.
 
