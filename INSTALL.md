@@ -52,7 +52,7 @@ file, use the following steps to install it.
     Unixodbc pkg is installed.
    ```
   
-  To set logon server information, enter the logon server ip and port information:
+  4. To set logon server information, enter the logon server ip and port information:
 
    ```bash
     [*] Set logon server infomation.
@@ -72,7 +72,7 @@ file, use the following steps to install it.
      > Is it correct? [Y/n] y
    ```
   
-  The final step in the process is to install files and set agent environments.
+ 5. The final step in the process is to install files and set agent environments.
 
    ```bash
     [*] Create nanny agent infomation file.
@@ -98,7 +98,7 @@ file, use the following steps to install it.
     [*] Setup init acccntl scripts.
    ```
   
-  After the process is complete, the installer will print a success message.
+ 6. After the process is complete, the installer will print a success message.
   
  
    ```[*] Installation is done.```
@@ -112,8 +112,8 @@ If you want to uninstall the release, run the `nanny_uninstall.sh` script.
 
 This will revert all changes made by the `install.sh` script.
 
-**NOTE:** The `uninstall.sh` file isn't created until `install.sh` is run for the first time. 
-You must run `install.sh` before running `uninstall.sh`.
+**NOTE:** The `nanny_uninstall.sh` file isn't created until `nanny_install.sh` is run for the first time. 
+You must run `nanny_install.sh` before running `nanny_uninstall.sh`.
 
 ----
 
