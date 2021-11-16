@@ -39,13 +39,24 @@ When it comes to prevention from malware infection, application controls will br
 Firstly, you can protect your endpoints from zero-day attack by unkown malware. This is because application controls eanble your computer systems to execute only approved applications. In other word, execution of unauthorized programs including computer viruses will be blocked or suspended. 
 In addition, prvention from running useless processes not only makes resource management efficient, but improves produtivity.
 
-How to contribute to Nanny-On Project
+How to Contribute to Nanny-On Project
 =====================================
 
 We always welcome to contribute our opensource project Nanny-On.
 For details, see [this].
 
 [this]: <https://github.com/nanny-on/agent/blob/main/CONTRIBUTING.md>
+
+How to Install
+==============
+
+You can install elf files on your ubuntu systems without building as well. Bofore installation, you can download the latest version of Nanny-On agent at [our GitHub]
+
+[our GitHub]: <https://github.com/nanny-on/agent/releases>
+
+The installation step id [here]
+
+[here]: <https://github.com/nanny-on/agent/blob/main/INSTALL.md>
 
 License
 =======
