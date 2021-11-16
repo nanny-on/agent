@@ -54,7 +54,7 @@ You can install elf files on your ubuntu systems without building as well. Bofor
 
 [our GitHub]: <https://github.com/nanny-on/agent/releases>
 
-The installation step id [here]
+The installation step is [here]
 
 [here]: <https://github.com/nanny-on/agent/blob/main/INSTALL.md>
 
