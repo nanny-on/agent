@@ -136,6 +136,8 @@ INT32		CLogicMgrPoInPtnSP::AnalyzePkt_FromMgr_Edit_Ext()
 			WriteLogE("[%s] apply policy information : [%d]", m_strLogicName.c_str(), g_nErrRtn);
 			return SetHdrAndRtn(AZPKT_CB_RTN_DBMS_FAIL);
 		}
+		if(t_ThreadPoInAccFile != NULL)
+			t_ThreadPoInAccFile->SendPolicy(AS_SEND_SP_FILE);
 	}
 
 	{
