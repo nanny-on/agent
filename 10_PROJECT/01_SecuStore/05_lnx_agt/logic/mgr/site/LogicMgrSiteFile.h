@@ -37,8 +37,8 @@ public:
 	String		GetWEngKey(String strFilePath);
 	void		CheckSiteFile(String strFilePath);
 	void		CheckSiteFile(PDB_SITE_FILE pdsf_src);
-	void		SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime);
-	void		CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile);
+	INT32		SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime);
+	INT32		CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile);
 	void		SendPkt_Sync(INT32 nOnceMaxNum = 1000);
 	void		SendPkt_ReSend(INT32 nOnceMaxNum = 1000);
 
