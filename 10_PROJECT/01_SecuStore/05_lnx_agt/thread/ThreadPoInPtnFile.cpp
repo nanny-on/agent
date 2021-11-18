@@ -31,21 +31,18 @@ CThreadPoInPtnFile*	t_ThreadPoInPtnFile = NULL;
 CThreadPoInPtnFile::CThreadPoInPtnFile()
 {
 	m_nOrderID = 0;
-	m_nPtnRetCount = 0;
-	m_nServerFd = -1;
-	m_nClientFd = -1;
+	m_nShmId = -1;
+	m_pString = NULL;
 	m_nTestTime = 0;
 	m_fTotalDiffTime = 0;
 	m_nTestCount = 0;
 	m_nCheckThread = ASI_DISCONNECT_STATE;
-	pthread_mutex_init(&m_SockMutex, NULL);
-	pthread_mutex_init(&m_PtnRetMutex, NULL);
+	pthread_mutex_init(&m_ShmMutex, NULL);
 }
 
 CThreadPoInPtnFile::~CThreadPoInPtnFile()
 {
-	pthread_mutex_destroy(&m_SockMutex);
-	pthread_mutex_destroy(&m_PtnRetMutex);
+	pthread_mutex_destroy(&m_ShmMutex);
 }
 
 BOOL CThreadPoInPtnFile::InitInstance()
@@ -63,68 +60,51 @@ int CThreadPoInPtnFile::ExitInstance()
 /////////////////////////////////////////////////////////////////////////////
 // CThreadPoInPtnFile message handlers
 
-INT32 CThreadPoInPtnFile::InitUnixSock(INT32 &nSrvFd)
+INT32 CThreadPoInPtnFile::InitShm()
 {
 	INT32 nRetVal = 0;
-	INT32 nOptVal = 1;
-	struct sockaddr_un serveraddr;
-	char acSockPath[MAX_FILE_NAME] = {0,};
-	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_FILE);
-	acSockPath[MAX_FILE_NAME-1] = 0;
-	if(is_file(acSockPath) == SOCK_FILE)
-	{
-		unlink(acSockPath);
-	}
-	pthread_mutex_lock (&m_SockMutex);
+	PASI_CHK_FILE_PROC pChkFileProc = NULL;
+	size_t nSize = sizeof(ASI_CHK_FILE_PROC)+8;
 	do{
-
-		if ((m_nServerFd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+		m_nShmId = shmget((key_t)SM_CHK_ACCESS_FILE_KEY, nSize, 0777 | IPC_CREAT);
+		if (m_nShmId < 0)
 		{
-			m_nServerFd = -1;
 			nRetVal = -1;
+			m_nShmId = -1;
 			break;
 		}
-		memset((char *)&serveraddr, 0, sizeof(serveraddr));
-		serveraddr.sun_family = AF_UNIX;
-		strncpy(serveraddr.sun_path, acSockPath, MAX_FILE_NAME-1);
-		setsockopt(m_nServerFd, SOL_SOCKET, SO_REUSEADDR, &nOptVal, sizeof(nOptVal));
-		if (bind(m_nServerFd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
+		m_pString = (char *)shmat(m_nShmId, NULL, 0);
+		if(m_pString == (char *)-1)
 		{
 			nRetVal = -2;
+			m_pString = NULL;
 			break;
 		}
-		if (listen(m_nServerFd, 1) < 0)
-		{
-			nRetVal = -3;
-			break;
-		}
+		pChkFileProc = (PASI_CHK_FILE_PROC)m_pString;
+		pChkFileProc->nState = SM_WRITE_CLIENT_FLAG;
 		nRetVal = 0;
-		nSrvFd = m_nServerFd;
 	}while(FALSE);
-	pthread_mutex_unlock (&m_SockMutex);
-	if(nRetVal != 0)
-		UninitUnixSock();
+
+	if(nRetVal < 0)
+		UninitShm();
 	return nRetVal;
 }
 
-VOID CThreadPoInPtnFile::UninitUnixSock()
-{
-	char acSockPath[MAX_FILE_NAME] = {0,};
-	pthread_mutex_lock (&m_SockMutex);
-	if(m_nServerFd != -1)
-	{
-		close(m_nServerFd);
-		m_nServerFd = -1;
-	}
-	pthread_mutex_unlock (&m_SockMutex);
 
-	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_FILE);
-	acSockPath[MAX_FILE_NAME-1] = 0;
-	if(is_file(acSockPath) == SOCK_FILE)
+VOID CThreadPoInPtnFile::UninitShm()
+{
+	if(m_pString != NULL)
 	{
-		unlink(acSockPath);
+		shmdt(m_pString);
+		m_pString = NULL;
+	}
+	if(m_nShmId != -1)
+	{
+		shmctl(m_nShmId,IPC_RMID,NULL);
+		m_nShmId = -1;
 	}
 }
+
 
 INT32	CThreadPoInPtnFile::IsInitLogic()
 {
@@ -142,10 +122,9 @@ INT32	CThreadPoInPtnFile::IsInitLogic()
 	return nRetVal;
 }
 
-INT32	CThreadPoInPtnFile::InitNotifyEvent(INT32 &nSrvFd)
+INT32	CThreadPoInPtnFile::InitNotifyEvent()
 {
 	INT32 nRetVal = 0;
-	INT32 nSFd = -1;
 	do{
 		nRetVal = CheckWhitePatternFile();
 		if(nRetVal < 0)
@@ -159,277 +138,47 @@ INT32	CThreadPoInPtnFile::InitNotifyEvent(INT32 &nSrvFd)
 			nRetVal -= 200;
 			break;
 		}
-		nRetVal = InitUnixSock(nSFd);
+		nRetVal = InitShm();
 		if(nRetVal < 0)
 		{
 			nRetVal -= 300;
 			break;
 		}
-		nSrvFd = nSFd;
 		nRetVal = 0;
 	}while(FALSE);
 	return nRetVal;
 }
 
-INT32	CThreadPoInPtnFile::GetCheckThreadState()
+INT32 CThreadPoInPtnFile::ShmRecv(PVOID pRecvData, INT32 nReqSize)
 {
-	INT32 nFlag = 0;
-	pthread_mutex_lock (&m_SockMutex);
-	nFlag = m_nCheckThread;
-	pthread_mutex_unlock (&m_SockMutex);
-	return nFlag;
-}
-
-
-VOID	CThreadPoInPtnFile::SetCheckThreadState(INT32 nState)
-{
-	pthread_mutex_lock (&m_SockMutex);
-	m_nCheckThread = nState;
-	pthread_mutex_unlock (&m_SockMutex);
-}
-
-INT32	CThreadPoInPtnFile::GetClientFd()
-{
-	INT32 nFd = 0;
-	pthread_mutex_lock (&m_SockMutex);
-	nFd = m_nClientFd;
-	pthread_mutex_unlock (&m_SockMutex);
-	return nFd;
-}
-
-
-VOID	CThreadPoInPtnFile::SetClientFd(INT32 nFd)
-{
-	pthread_mutex_lock (&m_SockMutex);
-	m_nClientFd = nFd;
-	pthread_mutex_unlock (&m_SockMutex);
-}
-
-
-INT32 CThreadPoInPtnFile::SockRecv(INT32 nFd, PVOID pRecvData, INT32 nReqSize)
-{
-	INT32 nOnceRecvSize = 0;
-	INT32 nRecvedSize = 0;
-	INT32 nRecvSize = 0;
 	INT32 nContinueCount = 0;
-	INT32 nRetVal = 0;
-	char *pcRecv = NULL;
-
-	if(pRecvData == NULL || nReqSize < 1 || nFd < -1)
-	{
-		return -1;
-	}
-	pcRecv = (char *)pRecvData;
-	while (nRecvedSize < nReqSize)
-	{
-		nOnceRecvSize = nReqSize - nRecvedSize;
-
-		nRecvSize = recv(nFd, &pcRecv[nRecvedSize], nOnceRecvSize, 0);
-		if (nRecvSize == -1)
-		{
-			if(errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				nContinueCount++;
-				if(nContinueCount > 20)
-				{
-					return -4;
-				}
-				Sleep(20);
-				continue;
-			}
-			else
-			{
-				return -2;
-			}
-		}
-		else if (nRecvSize == 0)
-		{
-			return -3;
-		}
-		else
-		{
-			nRecvedSize += nRecvSize;
-		}
-	}
-	return 0;
-}
-
-INT32 CThreadPoInPtnFile::SockWrite(INT32 nFd, PVOID pWriteData, INT32 nReqSize)
-{
-	INT32 nOnceWriteSize = 0;
-	INT32 nWritedSize = 0;
-	INT32 nWriteSize = 0;
-	INT32 nContinueCount = 0;
-	char *pcWrite = NULL;
-	if(pWriteData == NULL || nReqSize < 1 || nFd == -1)
-	{
-		return -1;
-	}
-	pcWrite = (char *)pWriteData;
-	while (nWritedSize < nReqSize)
-	{
-		nOnceWriteSize = nReqSize - nWritedSize;
-
-		nWriteSize = send(nFd, &pcWrite[nWritedSize], nOnceWriteSize, 0);
-		if (nWriteSize == -1)
-		{
-			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				nContinueCount++;
-				if(nContinueCount > 20)
-				{
-					return -4;
-				}
-				Sleep(20);
-				continue;
-			}
-			else
-			{
-				return -2;
-			}
-		}
-		else if (nWriteSize == 0)	//	socket close
-		{
-			return -3;
-		}
-		else
-		{
-			nWritedSize += nWriteSize;
-		}
-	}
-	return 0;
-}
-
-INT32		CThreadPoInPtnFile::SendExitThreadCmd()
-{
-	INT32 nClientFd = -1;
-	INT32 nRetVal = 0;
-	INT32 nState = 0;
 	PASI_CHK_FILE_PROC pChkFileProc = NULL;
-	INT32 nSize = sizeof(ASI_CHK_FILE_PROC);
-	INT32 nClientLen = 0;
-	struct sockaddr_un stClientAddr;
-	char acSockPath[MAX_PATH] = {0,};
 
-	do{
-		nRetVal = GetCheckThreadState();
-		if(nRetVal != ASI_ACCEPT_STATE)
-		{
-			nRetVal = 0;
-			break;
-		}
-		pChkFileProc = (PASI_CHK_FILE_PROC)malloc(nSize);
-		if(pChkFileProc == NULL)
-		{
-			WriteLogE("[po_in_ptn_file] fail to allocate memory (%d)", errno);
-			nRetVal = -1;
-			break;
-		}
-		memset(pChkFileProc, 0, nSize);
-
-		nClientFd = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (nClientFd == -1)
-		{
-			WriteLogE("[po_in_ptn_file] fail to create sock (%d)", errno);
-			nRetVal = -2;
-			break;
-		}
-
-		snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_FILE);
-		acSockPath[MAX_FILE_NAME-1] = 0;
-		nClientLen = sizeof(stClientAddr);
-		memset(&stClientAddr, 0, nClientLen);
-		stClientAddr.sun_family = AF_UNIX;
-		strncpy(stClientAddr.sun_path, acSockPath, MAX_FILE_NAME-1);
-		nRetVal = connect(nClientFd, (struct sockaddr *)&stClientAddr, nClientLen);
-		if (nRetVal < 0)
-		{
-			WriteLogE("[po_in_ptn_file] fail to connect %s (%d)", acSockPath, errno);
-			nRetVal = -3;
-			break;
-		}
-
-		pChkFileProc->nCmdId = CMD_PIPE_EXIT_THREAD;
-		nRetVal = SockWrite(nClientFd, (PVOID)pChkFileProc, nSize);
-		if(nRetVal < 0)
-		{
-			WriteLogE("[po_in_ptn_file] fail to write data (%d) (%d)", nRetVal, errno);
-			nRetVal = -4;
-			break;
-		}
-		nRetVal = 0;
-	}while(FALSE);
-	if(nClientFd != -1)
+	if(pRecvData == NULL || nReqSize < 1 || m_pString == NULL)
 	{
-		close(nClientFd);
-	}
-	safe_free(pChkFileProc);
-	return nRetVal;
-}
-
-INT32 CThreadPoInPtnFile::CheckThread(INT32 nClientFd)
-{
-	INT32 nRetVal = 0;
-	PASI_CHK_PTN_FILE pChkPtnFile = NULL;
-	if(nClientFd < 0)
-	{
-		WriteLogE("invalid input data : [%s][%d]", m_strThreadName.c_str(), nRetVal);
 		return -1;
 	}
-
-	pChkPtnFile = (PASI_CHK_PTN_FILE)malloc(sizeof(ASI_CHK_PTN_FILE));
-	if(pChkPtnFile == NULL)
+	pChkFileProc = (PASI_CHK_FILE_PROC)m_pString;
+	while (nContinueCount < 50)
 	{
-		WriteLogE("fail to allocate memory : [%s][%d]", m_strThreadName.c_str(), errno);
-		close(nClientFd);
-		SetClientFd(-1);
-		return -2;
-	}
-
-	SetCheckThreadState(ASI_CONNECT_STATE);
-	while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue())
-	{
-		memset(pChkPtnFile, 0, sizeof(ASI_CHK_PTN_FILE));
-		nRetVal = CheckSockEvent(nClientFd, pChkPtnFile);
-		if(nRetVal != 0)
+		if(pChkFileProc->nState == SM_READ_SERVER_FLAG)
 		{
-			if(nRetVal != -13)
-				WriteLogE("fail to check sock event : [%s][%d][%d]", m_strThreadName.c_str(), nRetVal, errno);
-			close(nClientFd);
-			SetClientFd(-1);
-			ClearPtnRet();
-			safe_free(pChkPtnFile);
-			SetCheckThreadState(ASI_DISCONNECT_STATE);
-			return nRetVal;
+			memcpy(pRecvData, m_pString, nReqSize);
+			pChkFileProc->nState = SM_WRITE_CLIENT_FLAG;
+			return 0;
 		}
-	}	
-	SetCheckThreadState(ASI_DISCONNECT_STATE);
-	close(nClientFd);
-	SetClientFd(-1);
-	ClearPtnRet();
-	safe_free(pChkPtnFile);
-	return 0;
+		nContinueCount++;
+		Sleep(100);
+	}
+	return 1;
 }
 
 INT32 CThreadPoInPtnFile::Run()
 {
 	// TODO: Add your specialized code here and/or call the base class
 	INT32 i, nRetVal = 0;
-	INT32 nServerFd = -1;
-	INT32 nClientFd = -1;
 	INT32 nState = 0;
-	pthread_t tid = 0;
-	struct sockaddr_un stClientAddr;
-	socklen_t nClientLen = sizeof(stClientAddr);
-
-	tid = syscall(SYS_gettid);
-	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
-	if(nRetVal < 0)
-	{
-		WriteLogE("fail to set priority: [chk_thread][%d]", errno);
-		return -2;
-	}
-
+	PASI_CHK_PTN_FILE pChkPtnFile = NULL;
 	nRetVal = LoadWhitePattern();
 	if(nRetVal < 0)
 	{
@@ -437,7 +186,15 @@ INT32 CThreadPoInPtnFile::Run()
 		return -1;
 	}
 
-	nRetVal = InitNotifyEvent(nServerFd);
+	pChkPtnFile = (PASI_CHK_PTN_FILE)malloc(sizeof(ASI_CHK_PTN_FILE));
+	if(pChkPtnFile == NULL)
+	{
+		WriteLogE("fail to allocate memory : [%s][%d]", m_strThreadName.c_str(), errno);
+		UnloadWhitePattern();
+		return -2;
+	}
+	memset(pChkPtnFile, 0, sizeof(ASI_CHK_PTN_FILE));
+	nRetVal = InitNotifyEvent();
 	if(nRetVal == 0)
 	{
 		m_nPause = 0;
@@ -451,37 +208,21 @@ INT32 CThreadPoInPtnFile::Run()
 	m_nRunFlag = 1;
 	WriteLogN("start %s thread : [%d]", m_strThreadName.c_str(), m_nRunFlag);
 
-	SetCheckThreadState(ASI_DISCONNECT_STATE);
-
 	while(t_EnvInfoOp && t_EnvInfoOp->GetMainContinue() && GetContinue())
 	{
 		if(!m_nPause)
 		{
-			SetCheckThreadState(ASI_ACCEPT_STATE);
-			nClientFd = accept(nServerFd, (struct sockaddr *)&stClientAddr, &nClientLen);
-			if (nClientFd < 0)
+			nRetVal = CheckShmEvent(pChkPtnFile);
+			if(nRetVal < 0)
 			{
-				WriteLogE("fail to accept : [%s][%d]", m_strThreadName.c_str(), errno);
-				UninitUnixSock();
-				m_nPause = 1;
-				Sleep(1000);
-			}
-			nRetVal = CheckThread(nClientFd);
-			if(nRetVal == 1111)
-			{
-				break;
-			}
-			else
-			{
-				UninitUnixSock();
+				UninitShm();
 				m_nPause = 1;
 				Sleep(1000);
 			}
 		}
 		else
 		{
-			nServerFd = -1;
-			nRetVal = InitNotifyEvent(nServerFd);
+			nRetVal = InitNotifyEvent();
 			if(nRetVal == 0)
 			{
 				m_nPause = 0;
@@ -501,8 +242,9 @@ INT32 CThreadPoInPtnFile::Run()
 	else if(!GetContinue())
 		WriteLogN("stop thread by sub continue flag : [%s]", m_strThreadName.c_str());
 
-	UninitUnixSock();
 	UnloadWhitePattern();
+	UninitShm();
+	safe_free(pChkPtnFile);
 	m_tOrderIDMap.clear();
 	return 0;
 }
@@ -582,187 +324,6 @@ VOID CThreadPoInPtnFile::UnloadWhitePattern()
 	m_tWEDLLUtil.FreeLibraryExt();
 }
 
-
-
-
-BOOL CThreadPoInPtnFile::AddPtnRet(char *acPath, ASI_RET_INFO stRetInfo)
-{
-	String strPath;
-	if(acPath == NULL || acPath[0] == 0)
-		return FALSE;
-	strPath = acPath;
-	pthread_mutex_lock (&m_PtnRetMutex);
-	m_tPtnRetMap[strPath] = stRetInfo;
-	m_nPtnRetCount++;
-	pthread_mutex_unlock (&m_PtnRetMutex);
-	return TRUE;
-}
-
-BOOL CThreadPoInPtnFile::GetPtnRet(char *acPath, PASI_RET_INFO pRetInfo)
-{
-	BOOL bRetVal = FALSE;
-	String strPath;
-	TMapPtnRetExItor find;
-	if(acPath == NULL || acPath[0] == 0 || pRetInfo == NULL)
-		return FALSE;
-
-	strPath = acPath;
-	pthread_mutex_lock (&m_PtnRetMutex);
-	find = m_tPtnRetMap.find(strPath);
-	if(find != m_tPtnRetMap.end())
-	{
-		memcpy(pRetInfo, (PASI_RET_INFO)&(find->second), sizeof(ASI_RET_INFO));
-		bRetVal = TRUE;
-	}
-	else
-	{
-		bRetVal = FALSE;
-	}
-	pthread_mutex_unlock (&m_PtnRetMutex);
-
-	return bRetVal;
-}
-
-
-UINT32 CThreadPoInPtnFile::GetPtnRetCount()
-{
-	UINT32 nCount = 0;
-	pthread_mutex_lock (&m_PtnRetMutex);
-	nCount = m_nPtnRetCount;
-	pthread_mutex_unlock (&m_PtnRetMutex);
-	return nCount;
-}
-
-BOOL CThreadPoInPtnFile::DelPtnRet(char *acPath)
-{
-	String strPath;
-	if(acPath == NULL || acPath[0] == 0)
-		return FALSE;
-	strPath = acPath;
-	pthread_mutex_lock (&m_PtnRetMutex);
-	m_tPtnRetMap.erase(strPath);
-	if(m_nPtnRetCount > 0)
-		m_nPtnRetCount--;
-	pthread_mutex_unlock (&m_PtnRetMutex);
-	return TRUE;
-}
-
-
-void CThreadPoInPtnFile::ClearPtnRet()
-{
-	pthread_mutex_lock (&m_PtnRetMutex);
-	if(m_nPtnRetCount != 0)
-	{
-		m_tPtnRetMap.clear();
-		m_nPtnRetCount = 0;
-	}
-	pthread_mutex_unlock (&m_PtnRetMutex);
-}
-
-
-
-BOOL	CThreadPoInPtnFile::ParseFilePath(PASI_CHK_INFO pInfo)
-{
-	INT32 i, nLen = 0;
-	BOOL bIsSep = FALSE;
-	if (pInfo == NULL || pInfo->acFullPath[0] == 0 || pInfo->nLen < 1)
-	{
-		return FALSE;
-	}
-	nLen = pInfo->nLen;
-	for(i=nLen-1; i>=0; i--)
-	{
-		if(pInfo->acFullPath[i] == '/')	
-		{
-			bIsSep = TRUE;
-			break;
-		}
-	}
-	if(bIsSep == FALSE || i<0)
-		return FALSE;
-
-	if(i==0)
-	{
-		pInfo->acPath[0] = '/';
-		pInfo->acPath[1] = '\0';
-		if(nLen < MAX_FILE_NAME)
-		{
-			strncpy(pInfo->acFile, &pInfo->acFullPath[1], nLen-1);
-			pInfo->acFile[nLen-1] = '\0'; 
-		}
-		else
-		{
-			strncpy(pInfo->acFile, &pInfo->acFullPath[1], MAX_FILE_NAME-1);
-			pInfo->acFile[MAX_FILE_NAME-1] = '\0'; 
-		}
-	}
-	else
-	{
-		strncpy(pInfo->acFile, &pInfo->acFullPath[i+1], MAX_FILE_NAME-1);
-		pInfo->acFile[MAX_FILE_NAME-1] = '\0'; 
-		strncpy(pInfo->acPath, pInfo->acFullPath, i);
-		pInfo->acPath[i] = '\0'; 
-	}
-	return TRUE;
-}
-
-BOOL	CThreadPoInPtnFile::GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo)
-{
-	ssize_t nLen = 0;
-	char acPath[MAX_TYPE_LEN] = {0,};
-
-	if (nFd < 1 || pFileInfo == NULL)
-	{
-		return FALSE;
-	}
-
-	snprintf (acPath, MAX_TYPE_LEN-1, "/proc/self/fd/%d", nFd);
-	acPath[MAX_TYPE_LEN-1] = 0;
-	nLen = readlink (acPath, pFileInfo->acFullPath, MAX_PATH-1);
-	if (nLen < 2 || nLen > MAX_PATH-1)
-	{
-		return FALSE;
-	}
-	pFileInfo->acFullPath[nLen] = '\0';
-	pFileInfo->nLen = (INT32)nLen;
-
-	if(nLen > 3 && !strcmp(&pFileInfo->acFullPath[nLen-3], ".so"))
-	{
-		return FALSE;
-	}
-	if(ParseFilePath(pFileInfo) == FALSE)
-	{
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-BOOL	CThreadPoInPtnFile::GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcInfo)
-{
-	ssize_t nLen = 0;
-	char acPath[MAX_TYPE_LEN] = {0,};
-
-	if (nPid < 1 || pProcInfo == NULL)
-	{
-		return FALSE;
-	}
-
-	snprintf (acPath, MAX_TYPE_LEN-1, "/proc/%d/exe", nPid);
-	acPath[MAX_TYPE_LEN-1] = 0;
-	nLen = readlink (acPath, pProcInfo->acFullPath, MAX_PATH-1);
-	if (nLen < 2 || nLen > MAX_PATH-1)
-	{
-		return FALSE;
-	}
-	pProcInfo->acFullPath[nLen] = '\0';
-	pProcInfo->nLen = (INT32)nLen;
-	if(ParseFilePath(pProcInfo) == FALSE)
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
 
 BOOL	CThreadPoInPtnFile::IsMatchFile(char *pFilePath, char *pcFeKey, DB_FILE_INFO& tSpecFI, UINT32 nChkType, CHAR chTok)
 {
@@ -1092,48 +653,73 @@ INT32		CThreadPoInPtnFile::ChkInPtn(char *pcFeKey, INT32& nBlockMode, INT32& nIs
 
 INT32	CThreadPoInPtnFile::SetLogExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
-	INT32 nRetVal = 0;
-	DB_LOG_SECU *pSecuLog = NULL;
 	if(pChkPtnFile == NULL)
 	{
 		return -1;
 	}
-
-	do{
-		pSecuLog = (DB_LOG_SECU *)malloc(sizeof(DB_LOG_SECU));
-		if(pSecuLog == NULL)
-		{
-			nRetVal = -2;
-			break;
-		}
-		memset(pSecuLog, 0, sizeof(DB_LOG_SECU));
-
-		pSecuLog->strSubjectPath = pChkPtnFile->stCHKFILE.stProcInfo.acPath;
-		pSecuLog->strSubjectName = pChkPtnFile->stCHKFILE.stProcInfo.acFile;
-		pSecuLog->strObjectPath	= pChkPtnFile->stCHKFILE.stFileInfo.acPath;
-		pSecuLog->strObjectName	= pChkPtnFile->stCHKFILE.stFileInfo.acFile;
-		pSecuLog->strExtInfo = pChkPtnFile->stAWWE.acWhiteHash;
+	DB_LOG_SECU stSecuLog;
+	stSecuLog.strSubjectPath = pChkPtnFile->stCHKFILE.stProcInfo.acPath;
+	stSecuLog.strSubjectName = pChkPtnFile->stCHKFILE.stProcInfo.acFile;
+	stSecuLog.strObjectPath	= pChkPtnFile->stCHKFILE.stFileInfo.acPath;
+	stSecuLog.strObjectName	= pChkPtnFile->stCHKFILE.stFileInfo.acFile;
+	if(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[0] != 0)
+		stSecuLog.strExtInfo = pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash;
 		
-		pSecuLog->nOpType = LOG_PROCESS_ACCESS_DENIED;
-		pSecuLog->nObjectType = DETECT_MODE_ACL;
+	stSecuLog.nOpType = LOG_PROCESS_ACCESS_DENIED;
+	stSecuLog.nObjectType = DETECT_MODE_ACL;
+	if(pChkPtnFile->stCHKFILE.stRetInfo.nIsWarning == 1)
+	{
+		stSecuLog.nBlockType = ASI_EPS_LOG_TYPE_WARN;
+	}
+	else
+	{
+		stSecuLog.nBlockType = ASI_EPS_LOG_TYPE_DENY;
+	}
+	stSecuLog.nPolicyType = pChkPtnFile->stCHKFILE.stRetInfo.nPolicyType;
+	stSecuLog.nEvtTime = GetCurrentDateTimeInt();
+	stSecuLog.nRegDate = t_ValidTimeUtil->GetValidTime();
+	HISYNCSTEPUP(stSecuLog.nSyncSvrStep);
+	t_LogicMgrLogSecu->SetLogSecu(stSecuLog);
+	return 0;
+}
+
+INT32	CThreadPoInPtnFile::AnalyzeAccEvent(PASI_CHK_PTN_FILE pChkPtnFile)
+{
+	INT32 nAcVal = 0;
+	if(pChkPtnFile == NULL)
+	{
+		return -1;
+	}
+	nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
+	if(nAcVal == RET_DENY || nAcVal == RET_WARN)
+	{
+		DB_LOG_SECU stSecuLog;
+		stSecuLog.strSubjectPath = pChkPtnFile->stCHKFILE.stProcInfo.acPath;
+		stSecuLog.strSubjectName = pChkPtnFile->stCHKFILE.stProcInfo.acFile;
+		stSecuLog.strObjectPath	= pChkPtnFile->stCHKFILE.stFileInfo.acPath;
+		stSecuLog.strObjectName	= pChkPtnFile->stCHKFILE.stFileInfo.acFile;
+		if(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[0] != 0)
+			stSecuLog.strExtInfo = pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash;
+		stSecuLog.nOpType = LOG_FILE_WRITE_DENIED;
+		stSecuLog.nObjectType = DETECT_MODE_ACL;
 		if(pChkPtnFile->stCHKFILE.stRetInfo.nIsWarning == 1)
 		{
-			pSecuLog->nBlockType = ASI_EPS_LOG_TYPE_WARN;
+			stSecuLog.nBlockType = ASI_EPS_LOG_TYPE_WARN;
 		}
 		else
 		{
-			pSecuLog->nBlockType = ASI_EPS_LOG_TYPE_DENY;
+			stSecuLog.nBlockType = ASI_EPS_LOG_TYPE_DENY;
 		}
-		pSecuLog->nPolicyType = pChkPtnFile->stCHKFILE.stRetInfo.nPolicyType;
-		pSecuLog->nEvtTime = GetCurrentDateTimeInt();
-		pSecuLog->nRegDate = t_ValidTimeUtil->GetValidTime();
-		HISYNCSTEPUP(pSecuLog->nSyncSvrStep);
-		t_LogicMgrLogSecu->SetLogSecu(*pSecuLog);
-		nRetVal = 0;
-	}while(FALSE);
-	safe_free(pSecuLog);
-	return nRetVal;
+		stSecuLog.nPolicyType = pChkPtnFile->stCHKFILE.stRetInfo.nPolicyType;
+		stSecuLog.nEvtTime = GetCurrentDateTimeInt();
+		stSecuLog.nRegDate = t_ValidTimeUtil->GetValidTime();
+
+		HISYNCSTEPUP(stSecuLog.nSyncSvrStep);
+		t_LogicMgrLogSecu->SetLogSecu(stSecuLog);
+	}
+	return 0;
 }
+
 
 VOID	CThreadPoInPtnFile::SetLogCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
@@ -1208,219 +794,6 @@ VOID	CThreadPoInPtnFile::SetLogCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 }
 
 
-INT32	CThreadPoInPtnFile::AnalyzeCreateEvent2(PASI_CHK_PTN_FILE pChkPtnFile, INT32 nCount)
-{
-	struct fanotify_response stAccess;
-	INT32 nRetVal = 0;
-	INT32 nUsedMode = STATUS_USED_MODE_OFF;
-	INT32 nBlockMode = SS_PO_CTL_PROC_BLOCK_MODE_ALLOW;
-	INT32 nIsWarning = 0;
-	INT32 nPolicyType = 0;
-	UINT32 nExtOption = 0;
-	DWORD dwFileType = AS_INVALID_FILE;
-	String strPath;
-	TMapStrIDItor find;
-
-
-	do{
-		strncpy(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath, "/usr/local/test", MAX_PATH-1);
-		pChkPtnFile->stCHKFILE.stProcInfo.acFullPath[MAX_PATH-1] = 0;
-		pChkPtnFile->stCHKFILE.stProcInfo.nLen = (INT32)strlen(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath);
-
-		if(ParseFilePath(&pChkPtnFile->stCHKFILE.stProcInfo) == FALSE)
-		{
-			break;
-		}
-		if(nCount == 0)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/Client", MAX_PATH-1);
-		else if(nCount == 1)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/Server", MAX_PATH-1);
-		else if(nCount == 2)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/EchoClient", MAX_PATH-1);
-		else if(nCount == 3)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/EchoServer", MAX_PATH-1);
-		else if(nCount == 4)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/test2", MAX_PATH-1);
-		else if(nCount == 5)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/home/castle/share/test/test3", MAX_PATH-1);
-		else
-		{
-			break;
-		}
-
-		pChkPtnFile->stCHKFILE.stFileInfo.acFullPath[MAX_PATH-1] = 0;
-		pChkPtnFile->stCHKFILE.stFileInfo.nLen = (INT32)strlen(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath);
-		if(ParseFilePath(&pChkPtnFile->stCHKFILE.stFileInfo) == FALSE)
-		{
-			break;
-		}
-
-		AnalyzeCreateEvent(pChkPtnFile);
-	}while(FALSE);
-	Sleep(2000);
-	return 0;
-}
-
-
-INT32	CThreadPoInPtnFile::AnalyzeExecEvent2(PASI_CHK_PTN_FILE pChkPtnFile, INT32 nCount)
-{
-	struct fanotify_response stAccess;
-	INT32 nRetVal = 0;
-	INT32 nUsedMode = STATUS_USED_MODE_OFF;
-	INT32 nBlockMode = SS_PO_CTL_PROC_BLOCK_MODE_ALLOW;
-	INT32 nIsWarning = 0;
-	INT32 nPolicyType = 0;
-	UINT32 nExtOption = 0;
-	DWORD dwFileType = AS_INVALID_FILE;
-	INT32 i, nAcVal = RET_NONE;
-	String strPath;
-	TMapStrIDItor find;
-	do{
-		strncpy(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath, "/usr/local/test", MAX_PATH-1);
-		pChkPtnFile->stCHKFILE.stProcInfo.acFullPath[MAX_PATH-1] = 0;
-		pChkPtnFile->stCHKFILE.stProcInfo.nLen = (INT32)strlen(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath);
-
-		if(ParseFilePath(&pChkPtnFile->stCHKFILE.stProcInfo) == FALSE)
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-		if(nCount == 0)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/bin/ping", MAX_PATH-1);
-		else if(nCount == 1)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/bin/kmod", MAX_PATH-1);
-		else if(nCount == 2)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/bin/true", MAX_PATH-1);
-		else if(nCount == 3)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/usr/bin/tail", MAX_PATH-1);
-		else if(nCount == 4)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/usr/bin/vim.tiny", MAX_PATH-1);
-		else if(nCount == 5)
-			strncpy(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, "/usr/share/autojump/autojump", MAX_PATH-1);
-		else
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-
-		pChkPtnFile->stCHKFILE.stFileInfo.acFullPath[MAX_PATH-1] = 0;
-		pChkPtnFile->stCHKFILE.stFileInfo.nLen = (INT32)strlen(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath);
-		if(ParseFilePath(&pChkPtnFile->stCHKFILE.stFileInfo) == FALSE)
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-
-		if(!_strnicmp(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath, NANNY_INSTALL_DIR, NANNY_INSTALL_DIR_LEN) || 
-			!_strnicmp(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, NANNY_INSTALL_DIR, NANNY_INSTALL_DIR_LEN))
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-		dwFileType = 0;
-		nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
-		if(nRetVal < 0 || dwFileType == AS_INVALID_FILE)
-		{
-			dwFileType = AS_INVALID_FILE;
-			nAcVal = RET_NONE;
-			break;
-		}
-		nRetVal = ChkInPtnEx(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, pChkPtnFile->stAWWE.acWhiteHash, nBlockMode, nIsWarning, nPolicyType, nExtOption);
-		if(nRetVal == 1)
-		{
-			nAcVal = RET_ALLOW;
-			if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
-			{
-				if(nIsWarning == 1)
-					nAcVal = RET_WARN;
-				else
-					nAcVal = RET_DENY;
-			}
-			break;
-		}
-
-		nRetVal = ChkInPtnSP(pChkPtnFile->stCHKFILE.stFileInfo.acPath, pChkPtnFile->stCHKFILE.stFileInfo.acFile, pChkPtnFile->stAWWE.acWhiteHash, nBlockMode, nIsWarning, nPolicyType);
-		if(nRetVal == 1)
-		{
-			nAcVal = RET_ALLOW;
-			if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
-			{
-				if(nIsWarning == 1)
-					nAcVal = RET_WARN;
-				else
-					nAcVal = RET_DENY;
-			}
-			break;
-		}
-
-		nRetVal = ChkInPtn(pChkPtnFile->stAWWE.acWhiteHash, nBlockMode, nIsWarning, nPolicyType);
-		if(nRetVal != 1)
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-		nAcVal = RET_ALLOW;
-		if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
-		{
-			if(nIsWarning == 1)
-				nAcVal = RET_WARN;
-			else
-				nAcVal = RET_DENY;
-		}
-	}while(FALSE);
-
-	if(nAcVal == RET_DENY || nAcVal == RET_WARN)
-	{
-		//log
-		SetLogExecEvent(pChkPtnFile);
-	}
-	Sleep(2000);
-	return 0;
-}
-
-
-INT32	CThreadPoInPtnFile::GetRetMapData(PASI_CHK_PTN_FILE pChkPtnFile)
-{
-	if(pChkPtnFile == NULL || pChkPtnFile->stCHKFILE.stProcInfo.acFullPath[0] == 0)
-	{
-		return -1;
-	}
-	if(GetPtnRet(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, &pChkPtnFile->stCHKFILE.stRetInfo) == FALSE)
-	{
-		return -2;
-	}
-
-	if(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[0] != 0)
-	{
-		strncpy(pChkPtnFile->stAWWE.acWhiteHash, pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash, SHA512_BLOCK_SIZE+1);
-		pChkPtnFile->stAWWE.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
-	}
-	return 0;
-}
-
-
-INT32	CThreadPoInPtnFile::SetRetMapData(PASI_CHK_PTN_FILE pChkPtnFile)
-{
-	if(pChkPtnFile == NULL || pChkPtnFile->stCHKFILE.stProcInfo.acFullPath[0] == 0)
-	{
-		WriteLogE("[SetRetMapData] invalid input event data");
-		return -1;
-	}
-	if(pChkPtnFile->stAWWE.acWhiteHash[0] != 0)
-	{
-		strncpy(pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash, pChkPtnFile->stAWWE.acWhiteHash, SHA512_BLOCK_SIZE+1);
-		pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
-	}
-	else
-		pChkPtnFile->stCHKFILE.stRetInfo.acWhiteHash[0] = 0;
-	if(AddPtnRet(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, pChkPtnFile->stCHKFILE.stRetInfo) == FALSE)
-	{
-		WriteLogE("[SetRetMapData] fail to set ret map data");
-		return -2;
-	}
-	return 0;
-}
-
 INT32	CThreadPoInPtnFile::BypassObjectPath(PASI_CHK_PTN_FILE pChkPtnFile)
 {
 	if(!_strnicmp(pChkPtnFile->stCHKFILE.stProcInfo.acFullPath, NANNY_INSTALL_DIR, NANNY_INSTALL_DIR_LEN))
@@ -1494,26 +867,11 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 	}
 
 	do{
-		if(BypassObjectPath(pChkPtnFile) == 0)
-		{
-			nAcVal = RET_NONE;
-			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, 0, 0, 0);
-			break;
-		}
-/*
-		if(GetRetMapData(pChkPtnFile) == 0)
-		{
-			nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
-			break;
-		}
-*/
 		dwFileType = 0;
 		nRetVal = m_tWEDLLUtil.GetWL(pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, (PVOID)&pChkPtnFile->stAWWE, sizeof(ASI_WENG_WL_EX), &dwFileType);
 		if(nRetVal < 0 || dwFileType == AS_INVALID_FILE)
 		{
 			nAcVal = RET_NONE;
-			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, 0, 0, 0);
-//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 
@@ -1529,7 +887,6 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 					nAcVal = RET_DENY;
 			}
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 
@@ -1545,15 +902,12 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 					nAcVal = RET_DENY;
 			}
 			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 		nRetVal = ChkInPtn(pChkPtnFile->stAWWE.acWhiteHash, nBlockMode, nIsWarning, nPolicyType);
 		if(nRetVal != 1)
 		{
 			nAcVal = RET_NONE;
-			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, RET_NONE, 0, 0, 0);
-//			SetRetMapData(pChkPtnFile);
 			break;
 		}
 		nAcVal = RET_NONE;
@@ -1566,12 +920,13 @@ INT32	CThreadPoInPtnFile::AnalyzeExecEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 				nAcVal = RET_DENY;
 			}
 		}
-		SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-//		SetRetMapData(pChkPtnFile);
+		if(pChkPtnFile->stCHKFILE.stRetInfo.nPolicyType == 0)
+			SetRetValValue(&pChkPtnFile->stCHKFILE.stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
 	}while(FALSE);
 
 	return nAcVal;
 }
+
 
 DWORD	CThreadPoInPtnFile::AnalyzeCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
@@ -1591,7 +946,7 @@ DWORD	CThreadPoInPtnFile::AnalyzeCreateEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 	return dwFileType;
 }
 
-INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pChkPtnFile)
+INT32		CThreadPoInPtnFile::CheckShmEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 {
 	INT32 nRetVal = 0;
 	INT32 nAcVal = RET_NONE;
@@ -1602,30 +957,35 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 	double fDiffTime = 0;
 	struct timeval stStartTime;
 #endif
-	if(pChkPtnFile == NULL || nClientFd == -1)
+	if(pChkPtnFile == NULL)
 	{
 		return -1;
 	}
 	do{
-		nRetVal = SockRecv(nClientFd, (PVOID)&pChkPtnFile->stCHKFILE, nSize);
+		nRetVal = ShmRecv((PVOID)&pChkPtnFile->stCHKFILE, nSize);
 		if(nRetVal != 0)
 		{
 			if(nRetVal < 0)
 				nRetVal -= 10;
 			break;
 		}
+		else if(nRetVal == 1)
+		{
+			nRetVal = check_proc_exist_by_name(ACCNOTIFYD_IDENT, 0);
+			if(nRetVal == ASI_PROC_EXIST)
+			{
+				nRetVal = 0;
+				break;
+			}
+			else
+			{
+				if(nRetVal < 0)
+					nRetVal -= 20;
+				break;
+			}
+		}
 
-		if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_EXIT_THREAD)
-		{
-			nRetVal = 1111;
-			break;
-		}
-		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_ALIVE_MESSAGE)
-		{
-			nRetVal = 0;
-			break;
-		}
-		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_CHK_WHITE)
+		if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_EXECUTE_FILE)
 		{
 #ifdef _PERP_TEST_LOG
 			if(!_stricmp(pChkPtnFile->stCHKFILE.stProcInfo.acFile, "exe_test_pgm"))
@@ -1634,24 +994,15 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 				gettimeofday(&stStartTime, NULL);
 			}
 #endif
-			nAcVal = AnalyzeExecEvent(pChkPtnFile);
+			nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
+			AnalyzeExecEvent(pChkPtnFile);
 #ifdef _PERP_TEST_LOG
 			if(bIsTestPgm == TRUE)
 			{
 				fDiffTime = diff_time(stStartTime);
 			}
-#endif
-			nRetVal = SockWrite(nClientFd, (PVOID)&pChkPtnFile->stCHKFILE, nSize);
-			if(nRetVal != 0)
-			{
-				if(nRetVal < 0)
-					nRetVal -= 20;
-				break;
-			}
 			if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 			{
-				SetLogExecEvent(pChkPtnFile);
-#ifdef _PERP_TEST_LOG
 				if(bIsTestPgm == TRUE)
 				{
 					UINT32 nTime = (UINT32)time(NULL);
@@ -1672,11 +1023,9 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 						WritePerfTest3Log("[total]\ttest the interval time for detection of unauthorized file [total : %d files] [average time : %.02f ms]", m_nTestCount+1, fDiffTime/1000);
 					}
 				}
-#endif /*_PERP_TEST_LOG*/
 			}
 			else
 			{
-#ifdef _PERP_TEST_LOG
 				if(bIsTestPgm == TRUE)
 				{
 					UINT32 nTime = (UINT32)time(NULL);
@@ -1687,22 +1036,49 @@ INT32		CThreadPoInPtnFile::CheckSockEvent(INT32 nClientFd, PASI_CHK_PTN_FILE pCh
 					m_nTestTime = nTime;
 					WritePerfTest2Log("[%03d]\ttest for detection of authorized file [%s]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath);
 				}
+			}
 #endif /*_PERP_TEST_LOG*/
+
+			if(nAcVal == RET_DENY || nAcVal == RET_WARN)
+			{
+				SetLogExecEvent(pChkPtnFile);
 			}
 		}
-		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_CREATE_FILE)
+		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_PO_IN_ACCESS_FILE)
 		{
-			dwFileType = AnalyzeCreateEvent(pChkPtnFile);
-			nRetVal = SockWrite(nClientFd, (PVOID)&pChkPtnFile->stCHKFILE, nSize);
-			if(nRetVal != 0)
+#ifdef _PERP_TEST_LOG
+			if(!_stricmp(pChkPtnFile->stCHKFILE.stProcInfo.acFile, "cp_test"))
 			{
-				if(nRetVal < 0)
-					nRetVal -= 30;
-				break;
+				bIsTestPgm = TRUE;
+				gettimeofday(&stStartTime, NULL);
 			}
-			if(dwFileType != AS_INVALID_FILE)
+#endif
+			nAcVal = pChkPtnFile->stCHKFILE.stRetInfo.nAcVal;
+			AnalyzeAccEvent(pChkPtnFile);
+			if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 			{
-				SetLogCreateEvent(pChkPtnFile);
+#ifdef _PERP_TEST_LOG
+				if(bIsTestPgm == TRUE)
+				{
+					fDiffTime = diff_time(stStartTime);
+					UINT32 nTime = (UINT32)time(NULL);
+					if(nTime - m_nTestTime > 30)
+					{
+						m_nTestCount = 0;
+						m_fTotalDiffTime = 0;
+					}
+					else
+						m_nTestCount++;
+					m_nTestTime = nTime;
+					m_fTotalDiffTime += fDiffTime;
+					WritePerfTest4Log("[%03d]\ttest the interval time for detection of authorized file [%s] [detection time : %.02f ms]", m_nTestCount, pChkPtnFile->stCHKFILE.stFileInfo.acFullPath, fDiffTime/1000);
+					if(m_nTestCount == 19)
+					{
+						fDiffTime = m_fTotalDiffTime/20;
+						WritePerfTest4Log("[total]\ttest the interval time for detection of authorized file [total : %d files] [average time : %.02f ms]", m_nTestCount+1, fDiffTime/1000);
+					}
+				}
+#endif /*_PERP_TEST_LOG*/
 			}
 		}
 		nRetVal = 0;
