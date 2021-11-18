@@ -174,7 +174,7 @@ INT32		CLogicMgrPoInPtnBL::ApplyPolicy()
 					return 0;
 				}
 				if(t_ThreadPoInAccFile != NULL)
-					t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
+					t_ThreadPoInAccFile->SendPolicy(AS_SEND_START_POLICY | AS_SEND_BLACK_FILE | AS_SEND_END_POLICY);
 				t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);
 			}
 		}
@@ -243,10 +243,8 @@ INT32		CLogicMgrPoInPtnBL::LoadPtn()
 					WriteLogE("[%s] can not reload gbo ptn file  : [%s]", m_strLogicName.c_str(), pdata->tDPFI.strSaveName.c_str());
 					return 0;
 				}
-/*				
 				if(t_ThreadPoInAccFile != NULL)
-					t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
-*/
+					t_ThreadPoInAccFile->SendPolicy(AS_SEND_START_POLICY | AS_SEND_BLACK_FILE | AS_SEND_END_POLICY);
 			}
 		}
 	}
