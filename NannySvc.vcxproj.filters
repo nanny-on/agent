@@ -1561,12 +1561,14 @@
     <ClCompile Include="01_SDK\01_GLB_W32\src\LnxString.cpp" />
     <ClCompile Include="01_SDK\01_GLB_W32\src\LnxStringW.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.cpp" />
-    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.cpp" />
-    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\cp_test\cp_test.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\07_test\exe_test_pgm\exe_test_pgm.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\07_test\make_test_pgm\make_test_pgm.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\07_test\write_test_pgm\write_test_pgm.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_client_socket.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_server_socket.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateFile.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateLog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01_SDK\00_SDK_01\inc\asi_lnx_base_hdr.h" />
@@ -3696,8 +3698,10 @@
     <ClInclude Include="01_SDK\01_GLB_W32\src\LnxString.h" />
     <ClInclude Include="01_SDK\01_GLB_W32\src\LnxStringW.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.h" />
-    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.h" />
-    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_client_socket.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_server_socket.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateFile.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateLog.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="01_SDK\01_DLL\03_system\white_pattern\dll\testsrc\Makefile" />

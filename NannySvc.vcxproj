@@ -1186,7 +1186,8 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoFePtnLo.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoFeScan.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFile.cpp" />
-    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateFile.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateLog.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInPtnFile.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInPtnScan.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInSpReq.cpp" />
@@ -1219,9 +1220,10 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_mon.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_base.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_client_socket.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event.cpp" />
-    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.cpp" />
+    <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_server_socket.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_timer.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\cp_test\cp_test.cpp" />
     <ClCompile Include="10_PROJECT\01_SecuStore\06_util\dbuse\dbuse.cpp" />
@@ -3190,7 +3192,8 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoFePtnLo.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoFeScan.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFile.h" />
-    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInAccFileBk.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateFile.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInCreateLog.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInPtnFile.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInPtnScan.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\05_lnx_agt\thread\ThreadPoInSpReq.h" />
@@ -3215,9 +3218,10 @@ copy $(OutDir)$(ProjectName).pdb ..\output_pdb\x64\$(ProjectName).pdb
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_mon.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_base.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_client_socket.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event.h" />
-    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_event_bk.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_policy.h" />
+    <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_thread_server_socket.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\accnotifyd\accnotify_timer.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_dlg.h" />
     <ClInclude Include="10_PROJECT\01_SecuStore\06_util\fanotifyd\fanotify_mon.h" />
