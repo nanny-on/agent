@@ -754,8 +754,6 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 			t_ManagePoInPtnOp->SetPktHost(pCurPolicy->tDPH.nID, stSendToken);
 			WriteLogN("[%s] set po in ptn op success : [%d]", m_strLogicName.c_str(), pCurPolicy->tDPH.nID);
 			stSendToken.Clear();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
 			if(t_ThreadPoInAccFile != NULL)
 				t_ThreadPoInAccFile->SendPolicy(AS_SEND_POLICY_INFO);
 
@@ -791,8 +789,6 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 */
 				WriteLogN("[%s] set po in ptn bl ptn success : [%d]", m_strLogicName.c_str(), pCurPolicy->tDPH.nID);
 				stSendToken.Clear();
-				if(t_ThreadPoInPtnFile != NULL)
-					t_ThreadPoInPtnFile->ClearPtnRet();
 				if(t_ThreadPoInAccFile != NULL)
 					t_ThreadPoInAccFile->SendPolicy(AS_SEND_POLICY_INFO);
 			}			
@@ -830,8 +826,6 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 */
 				WriteLogN("[%s] set po in ptn wl ptn success : [%d]", m_strLogicName.c_str(), pCurPolicy->tDPH.nID);
 				stSendToken.Clear();
-				if(t_ThreadPoInPtnFile != NULL)
-					t_ThreadPoInPtnFile->ClearPtnRet();
 				if(t_ThreadPoInAccFile != NULL)
 					t_ThreadPoInAccFile->SendPolicy(AS_SEND_POLICY_INFO);
 			}			
@@ -854,9 +848,8 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 			t_ManagePoInPtnExTrust->SetPkt(stSendToken);
 			WriteLogN("[%s] set po in ptn ex trust success : [%d]", m_strLogicName.c_str(), t_ManagePoInPtnExTrust->Count());
 			stSendToken.Clear();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
-
+			if(t_ThreadPoInAccFile != NULL)
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_POLICY_INFO);
 		}while(FALSE);
 
 		do
@@ -875,8 +868,8 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 			t_ManagePoInPtnSPRule->SetPkt(stSendToken);
 			WriteLogN("[%s] set po in ptn sp rule success : [%d]", m_strLogicName.c_str(), t_ManagePoInPtnSPRule->Count());
 			stSendToken.Clear();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
+			if(t_ThreadPoInAccFile != NULL)
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_POLICY_INFO);
 		}while(FALSE);
 		//--------------------------------------------------------------------------------------------------------------------
 		//--------------------------------------------------------------------------------------------------------------------
@@ -901,8 +894,6 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 */
 			WriteLogN("[%s] set po in rs op success : [%d]", m_strLogicName.c_str(), pCurPolicy->tDPH.nID);
 			stSendToken.Clear();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
 		}while(FALSE);
 
 		do
@@ -924,8 +915,6 @@ INT32		CLogicApplyPolicy::SetEPSDrvPolicy()
 */
 			WriteLogN("[%s] set po in rs bk success : [%d]", m_strLogicName.c_str(), pCurPolicy->tDPH.nID);
 			stSendToken.Clear();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
 		}while(FALSE);
 	}
 
