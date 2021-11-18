@@ -52,7 +52,7 @@ INT32 is_valid_num(char *str)
 	return 0;
 }
 
-INT32 is_dir(char *pcPath)
+INT32 check_dir(char *pcPath)
 {
 	struct stat stStat;
 	if(pcPath == NULL || pcPath[0] == 0)
@@ -65,12 +65,25 @@ INT32 is_dir(char *pcPath)
 	return 0;
 }
 
+INT32 check_file(char *pcPath)
+{
+	struct stat stStat;
+	if(pcPath == NULL || pcPath[0] == 0)
+		return -1;
+
+	if(stat(pcPath, &stStat) < 0)
+		return -2;
+	if (!S_ISREG(stStat.st_mode))
+		return -3;
+	return 0;
+}
+
 INT32 create_dir(char *pcPath)
 {
 	if(pcPath == NULL || pcPath[0] == 0)
 		return -1;
 
-	if(is_dir(pcPath) == 0)
+	if(check_dir(pcPath) == 0)
 		return 0;
 
 	if(mkdir(pcPath, 0755) != 0)
@@ -78,6 +91,58 @@ INT32 create_dir(char *pcPath)
 
 	return 0;
 }
+
+INT32 clear_dir(char *pcPath)
+{
+	INT32 nRetVal = 0;
+	DIR *dp = NULL;
+	struct dirent *dirp = NULL;
+	char acFilePath[MAX_PATH] = {0,};
+	if(pcPath == NULL || pcPath[0] == 0)
+	{
+		return -1;
+	}
+
+	dp = opendir(pcPath);
+	if (dp == NULL)
+	{
+		return -2;
+	}
+
+	while((dirp = readdir(dp)) != NULL)
+	{
+		if(!_stricmp(dirp->d_name, ".") || !_stricmp(dirp->d_name, ".."))
+			continue;
+		if(DT_REG == dirp->d_type)
+		{
+			snprintf(acFilePath, MAX_PATH-1, "%s/%s", pcPath, dirp->d_name);
+			acFilePath[MAX_PATH-1] = 0;
+			unlink(acFilePath);
+		}
+	}
+	closedir(dp);
+
+	return nRetVal;
+}
+
+INT32 check_tmp_dir()
+{
+	char acPath[MAX_PATH] = "/tmp/tcfile";
+
+	if(check_dir(acPath) == 0)
+	{
+		if(clear_dir(acPath) != 0)
+			return -1;
+	}
+	else
+	{
+		if(mkdir(acPath, 0755) != 0)
+			return -2;
+	}
+
+	return 0;
+}
+
 
 
 
@@ -161,6 +226,8 @@ INT32 build_test_pgm(char *acPath, char *acName, INT32 nIndex)
 		return -1;
 	snprintf(acSrcPath, MAX_PATH-1, "%s/%s_file_%03d.cpp", acPath, acName, nIndex);
 	snprintf(acBinPath, MAX_PATH-1, "%s/%s_file_%03d", acPath, acName, nIndex);
+	if(check_file(acBinPath) == 0)
+		unlink(acBinPath);
 
 	pid = fork();
 	if (pid < 0)
@@ -188,9 +255,175 @@ INT32 build_test_pgm(char *acPath, char *acName, INT32 nIndex)
 			}
 		}
 	}
-
 	unlink(acSrcPath);
 	return nRetVal;
+}
+
+void trim_feed(char *str)
+{
+	while (*str) {
+		if (*str == 0x0a || *str == 0x0d) {
+			*str = '\0';
+			break;
+		} else {
+			str++;
+		}
+	}
+}
+
+INT32 is_proc(char *acProcName)
+{
+	FILE *fp = NULL;
+	char *pTok, *pLast;
+	char acBuf[MAX_PATH] = { 0,};
+	char acFileName[MAX_PATH] = {0,};
+	char *pcPath = NULL;
+	char acDelim[3] = { 0x09, 0x20, 0x00 }; /* tab, space */
+	DIR *pDir = NULL;
+	struct dirent *pDirEnt = NULL;
+
+	if(acProcName == NULL)
+		return -1;
+
+	pcPath = (char *)malloc(MAX_PATH);
+	if(pcPath == NULL)
+	{
+		return -2;
+	}
+	memset(pcPath, 0, MAX_PATH);
+
+	if ( (pDir = opendir("/proc")) == NULL)
+	{
+		safe_free(pcPath);
+		return -3;
+	}
+
+	while((pDirEnt = readdir(pDir)) != NULL)
+	{
+		if (pDirEnt->d_name[0] < '0' || pDirEnt->d_name[0] > '9')
+		{
+			continue;
+		}
+		strncpy(acFileName, pDirEnt->d_name, MAX_PATH-1);
+		acFileName[MAX_PATH-1] = 0;
+		snprintf(pcPath, MAX_PATH-1, "/proc/%s/status", acFileName);
+		pcPath[MAX_PATH-1] = 0;
+
+		if ( (fp = fopen(pcPath, "r")) == NULL)
+		{
+			continue;
+		}
+
+		while (fgets(acBuf, MAX_PATH-1, fp))
+		{
+			trim_feed(acBuf);
+			pTok = strtok_r(acBuf, acDelim, &pLast);
+			if (pTok == NULL)
+			{
+				memset(acBuf, 0, MAX_PATH);
+				continue;
+			}
+
+			if (strcmp(pTok, "Name:") != 0)
+			{
+				memset(acBuf, 0, MAX_PATH);
+				continue;
+			}
+
+			pTok = strtok_r(NULL, "", &pLast);
+			if (pTok == NULL)
+			{
+				memset(acBuf, 0, MAX_PATH);
+				continue;
+			}
+
+			if (strcmp(pTok, acProcName) != 0)
+			{
+				memset(acBuf, 0, MAX_PATH);
+				break;
+			}
+			else
+			{
+				fclose(fp);
+				closedir(pDir);
+				safe_free(pcPath);
+				return 1;
+			}
+		}
+
+		fclose(fp);
+	}
+
+	closedir(pDir);
+	safe_free(pcPath);
+
+	return 0;
+}
+
+INT32 check_make_test_pgm(char *acPath, char *acName, INT32 nIndex)
+{
+	INT32 i, nRetVal = 0;
+	char acBinPath[MAX_PATH] = {0,};
+	char acCheckPath[MAX_PATH] = {0,};
+
+	if(acPath == NULL || acPath[0] == 0 || acName == NULL || acName[0] == 0)
+		return -1;
+
+	snprintf(acBinPath, MAX_PATH-1, "%s/%s_file_%03d", acPath, acName, nIndex);
+	snprintf(acCheckPath, MAX_PATH-1, "/tmp/tcfile/%s_file_%03d", acName, nIndex);
+	for(i=0; i<20; i++)
+	{
+		if(check_file(acCheckPath) == 0)
+		{
+			unlink(acCheckPath);
+			return 0;
+		}
+		Sleep(50);
+	}
+	unlink(acBinPath);
+	return -2;
+}
+
+INT32 build_pgm(char *acPath, char *acName, INT32 nIndex)
+{
+	INT32 i, nRetVal = 0;
+	INT32 nIsNanny = 0;
+	char acTime[MAX_TIME_STR] = {0,};
+	if(acPath == NULL || acPath[0] == 0 || acName == NULL || acName[0] == 0)
+		return -1;
+
+	nIsNanny = is_proc(NANNY_AGENT_IDENT);
+
+	for(i=0; i<10; i++)
+	{
+		nRetVal = make_test_src(acPath, acName, nIndex);
+		if(nRetVal < 0)
+		{
+			nRetVal -= 10;
+			fprintf(stderr, "fail to make %s_file_%000d.cpp (%d) (%d)\n", acName, nIndex, nRetVal, errno);
+			return nRetVal;
+		}
+		Sleep(100);
+		nRetVal = build_test_pgm(acPath, acName, nIndex);
+		if(nRetVal < 0)
+		{
+			nRetVal -= 20;
+			fprintf(stderr, "fail to build %s_file_%000d (%d) (%d)\n", acName, nIndex, nRetVal, errno);
+			return nRetVal;
+		}
+		Sleep(100);
+
+		if(nIsNanny == 0)
+		{
+			return 0;
+		}
+		nRetVal = check_make_test_pgm(acPath, acName, nIndex);
+		if(nRetVal == 0)
+		{
+			return 0;
+		}
+	}
+	return -2;
 }
 
 void print_usage()
@@ -310,19 +543,13 @@ int main(int argc, char* argv[])
 	{
 		exit(3);
 	}
+	check_tmp_dir();
 	for(i=1; i<nFileMax+1; i++)
 	{
-		nRetVal = make_test_src(acFullPath, acTestName, i);
+		nRetVal = build_pgm(acFullPath, acTestName, i);
 		if(nRetVal < 0)
 		{
-			fprintf(stderr, "fail to make %s_file_%000d.cpp (%d) (%d)\n", acTestName, i, nRetVal, errno);
 			exit(4);
-		}
-		nRetVal = build_test_pgm(acFullPath, acTestName, i);
-		if(nRetVal < 0)
-		{
-			fprintf(stderr, "fail to build %s_file_%000d (%d) (%d)\n", acTestName, i, nRetVal, errno);
-			exit(5);
 		}
 	}
 	fprintf(stdout, "success to make %s's %d test files\n", acTestPath, nFileMax);
