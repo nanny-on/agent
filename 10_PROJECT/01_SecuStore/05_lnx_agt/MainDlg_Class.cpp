@@ -444,10 +444,24 @@ INT32		CMainDlg::CreateSubClass()
 			break;
 		}
 
+		t_ThreadPoInCreateLog = new CThreadPoInCreateLog();
+		if(t_ThreadPoInCreateLog == NULL)
+		{
+			nRetVal = -63;
+			break;
+		}
+
+		t_ThreadPoInCreateFile = new CThreadPoInCreateFile();
+		if(t_ThreadPoInCreateFile == NULL)
+		{
+			nRetVal = -64;
+			break;
+		}
+
 		t_ThreadPoInSpReq = new CThreadPoInSpReq();
 		if(t_ThreadPoInSpReq == NULL)
 		{
-			nRetVal = -63;
+			nRetVal = -65;
 			break;
 		}
 //      t_ThreadPoInRsBk			= new CThreadPoInRsBk();
@@ -1703,11 +1717,27 @@ INT32		CMainDlg::StartSubClass()
 		}
 
 		nThreadId = 0;
+		bRetVal = t_ThreadPoInCreateLog->CreateThreadExt("po_in_log", &nThreadId);
+		if(bRetVal == FALSE)
+		{
+			WriteLogE("start [po_in_log] thread result : fail [%d]", errno);
+			return -15;
+		}
+
+		nThreadId = 0;
+		bRetVal = t_ThreadPoInCreateFile->CreateThreadExt("po_in_create", &nThreadId);
+		if(bRetVal == FALSE)
+		{
+			WriteLogE("start [po_in_create] thread result : fail [%d]", errno);
+			return -16;
+		}
+
+		nThreadId = 0;
 		bRetVal = t_ThreadPoInSpReq->CreateThreadExt("po_in_sp_req", &nThreadId);
 		if(bRetVal == FALSE)
 		{
 			WriteLogE("start [po_in_sp_req] thread result : fail [%d]", errno);
-			return -15;
+			return -17;
 		}
 /*
 		if(SetER(t_ThreadExecute->CreateThreadExt("execute")) == 0)
@@ -2024,13 +2054,20 @@ INT32		CMainDlg::StopSubClass()
 		WriteLogN("stop [chk_hk_noti] thread result : [%d]", g_nErrRtn);
 
 		t_ThreadPoInPtnFile->SetContinue(0);
-		t_ThreadPoInPtnFile->SendExitThreadCmd();
 		SetER(StopThread_Common(t_ThreadPoInPtnFile));
 		WriteLogN("stop [po_in_ptn_file] thread result : [%d]", g_nErrRtn);
 
 		t_ThreadPoInAccFile->SetContinue(0);
 		SetER(StopThread_Common(t_ThreadPoInAccFile));
 		WriteLogN("stop [po_in_acc_file] thread result : [%d]", g_nErrRtn);
+
+		t_ThreadPoInCreateFile->SetContinue(0);
+		SetER(StopThread_Common(t_ThreadPoInCreateFile));
+		WriteLogN("stop [po_in_create] thread result : [%d]", g_nErrRtn);
+
+		t_ThreadPoInCreateLog->SetContinue(0);
+		SetER(StopThread_Common(t_ThreadPoInCreateLog));
+		WriteLogN("stop [po_in_log] thread result : [%d]", g_nErrRtn);
 
 		t_ThreadPoInSpReq->SetContinue(0);
 		t_ThreadPoInSpReq->SendExitThreadCmd();
@@ -2265,6 +2302,8 @@ INT32		CMainDlg::DeleteSubClass()
 		SAFE_DELETE(t_ThreadPoFaOp);
 		SAFE_DELETE(t_ThreadPoInPtnFile);
 		SAFE_DELETE(t_ThreadPoInAccFile);
+		SAFE_DELETE(t_ThreadPoInCreateFile);
+		SAFE_DELETE(t_ThreadPoInCreateLog);
 		SAFE_DELETE(t_ThreadPoInSpReq);
 //		SAFE_DELETE(t_ThreadPoInRsBk);		//TRACE("delete thread [%s]\n", "InRsBk");
 //		SAFE_DELETE(t_ThreadExecute);		//TRACE("delete thread [%s]\n", "Execute");
