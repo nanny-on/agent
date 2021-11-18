@@ -139,6 +139,8 @@ INT32		CLogicMgrPoInPtnEx::AnalyzePkt_FromMgr_Edit_Ext()
 
 		t_ManagePoInPtnExTrust->SyncPoInPtnExTrust(data.tDPH.nID);
 		t_LogicPoInPtnExTrust->SendPkt_Sync();
+		if(t_ThreadPoInAccFile != NULL)
+			t_ThreadPoInAccFile->SendPolicy(AS_SEND_EX_FILE);
 	}
 
 	{
