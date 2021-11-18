@@ -216,13 +216,19 @@ typedef wstring StringW;
 #define NANNY_INSTALL_DIR		"/usr/local/ashin"
 #define NANNY_INSTALL_DIR_LEN	16
 
-
 #define REQ_WHITE_PATH		"/bin/reqwhite"
+#define REQ_WHITE_NAME		"reqwhite"
+#define CP_TEST_NAME		"cp_test"
+#define LD_BIN_NAME			"ld"
+#define MAKE_TEST_NAME		"make_test_pgm"
+#define EXE_TEST_NAME		"exe_test_pgm"
+#define WRITE_TEST_NAME		"write_test_pgm"
 
 
-#define UNIX_SOCK_FILE		"white_check_socket"
+//#define UNIX_SOCK_FILE		"white_check_socket"
 #define UNIX_SOCK_ACC_FILE  "access_check_socket"
-#define UNIX_SOCK_POL_FILE  "access_policy_socket"
+#define UNIX_SOCK_EVT_FILE	"access_event_socket"
+#define UNIX_SOCK_UNUSED_FILE  "access_unused_socket"
 
 #define ASHIN_STRING_CLS_NAME "ASSTRING_938EF200_F60B_452A"
 #define ASHIN_STRING_CLS_NAME_W L"ASSTRING_938EF200_F60B_452A"
