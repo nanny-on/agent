@@ -31,14 +31,19 @@ CThreadPoInAccFile*	t_ThreadPoInAccFile = NULL;
 CThreadPoInAccFile::CThreadPoInAccFile()
 {
 	m_nShmId = -1;
+	m_nClientFd = -1;
 	m_pString = NULL;
 	m_nTestTime = 0;
 	m_nTestCount = 0;
 	m_fTotalDiffTime = 0;
+	m_nSendTime = 0;
+	m_nSendingMode = 0;
+	pthread_mutex_init(&m_SockMutex, NULL);
 }
 
 CThreadPoInAccFile::~CThreadPoInAccFile()
 {
+	pthread_mutex_destroy(&m_SockMutex);
 }
 
 BOOL CThreadPoInAccFile::InitInstance()
@@ -53,6 +58,42 @@ int CThreadPoInAccFile::ExitInstance()
 	return CThreadBase::ExitInstance();
 }
 
+INT32 CThreadPoInAccFile::LoadWhitePattern()
+{
+	INT32 nRetVal = 0;
+	CHAR acPath[MAX_PATH] = {0, };
+
+	snprintf(acPath, MAX_PATH-1, "%s/asi_weng.so", t_EnvInfo->m_strDLLPath.c_str());
+	acPath[MAX_PATH-1] = 0;
+
+	nRetVal = m_tWEDLLUtil.LoadLibraryExt(acPath);
+	if(nRetVal < 0)
+	{
+		WriteLogE("[%s] fail to load library  : [%s][%d][%d]", m_strThreadName.c_str(), acPath, nRetVal, errno);
+		return -2;
+	}
+	nRetVal = m_tWEDLLUtil.Init();
+	if(nRetVal < 0)
+	{
+		WriteLogE("[%s] fail to init we dll  : [%d]", m_strThreadName.c_str(), nRetVal);
+		return -3;
+	}
+	nRetVal = m_tWEDLLUtil.InitDB();
+	if(nRetVal < 0)
+	{
+		WriteLogE("[%s] fail to init we db  : [%d]", m_strThreadName.c_str(), nRetVal);
+		return -4;
+	}
+	return 0;
+}
+
+VOID CThreadPoInAccFile::UnloadWhitePattern()
+{
+	m_tWEDLLUtil.ClearFile();
+	m_tWEDLLUtil.FreeLibraryExt();
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CThreadPoInAccFile message handlers
 
@@ -61,7 +102,7 @@ INT32 CThreadPoInAccFile::InitShm()
 	INT32 nRetVal = 0;
 	size_t nSize = sizeof(ASI_CHK_FILE_PROC)+8;
 	do{
-		m_nShmId = shmget((key_t)SM_CHK_ACCESS_FILE_KEY, nSize, 0777 | IPC_CREAT);
+		m_nShmId = shmget((key_t)SM_OLD_ACCESS_FILE_KEY, nSize, 0777 | IPC_CREAT);
 		if (m_nShmId < 0)
 		{
 			nRetVal = -1;
@@ -113,6 +154,79 @@ INT32	CThreadPoInAccFile::IsInitLogic()
 	return nRetVal;
 }
 
+VOID CThreadPoInAccFile::GetSockId(INT32 &nClientFd)
+{
+	pthread_mutex_lock (&m_SockMutex);
+	nClientFd = m_nClientFd;
+	pthread_mutex_unlock (&m_SockMutex);
+}
+
+VOID CThreadPoInAccFile::SetSockId(INT32 nClientFd)
+{
+	pthread_mutex_lock (&m_SockMutex);
+	m_nClientFd = nClientFd;
+	pthread_mutex_unlock (&m_SockMutex);
+}
+
+
+INT32 CThreadPoInAccFile::InitSockEnv()
+{
+	INT32 nClientFd = -1;
+	INT32 nRetVal = 0;
+	INT32 nClientLen = 0;
+	struct sockaddr_un stClientAddr;
+	char acSockPath[MAX_FILE_NAME] = {0,};
+
+	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_ACC_FILE);
+	acSockPath[MAX_FILE_NAME-1] = 0;
+
+	nRetVal = check_proc_exist_by_name(ACCNOTIFYD_IDENT, 0);
+	if(nRetVal != ASI_PROC_EXIST || is_file(acSockPath) != SOCK_FILE)
+	{
+		return -1;
+	}
+
+	do{
+		nClientFd = socket(AF_UNIX, SOCK_STREAM, 0);
+		if (nClientFd == -1)
+		{
+			WriteLogE("[SendPolicy] fail to create sock (%d)", errno);
+			nRetVal = -2;
+			break;
+		}
+
+
+		nClientLen = sizeof(stClientAddr);
+		memset(&stClientAddr, 0, nClientLen);
+		stClientAddr.sun_family = AF_UNIX;
+		strncpy(stClientAddr.sun_path, acSockPath, MAX_FILE_NAME-1);
+		nRetVal = connect(nClientFd, (struct sockaddr *)&stClientAddr, nClientLen);
+		if (nRetVal < 0)
+		{
+			if(errno != 111)
+				WriteLogE("[SendPolicy] fail to connect %s (%d)", acSockPath, errno);
+			UninitSockEnv();
+			nRetVal = -3;
+			break;
+		}
+		SetSockId(nClientFd);
+		nRetVal = 0;
+	}while(FALSE);
+	return nRetVal;
+}
+
+VOID CThreadPoInAccFile::UninitSockEnv()
+{
+	pthread_mutex_lock (&m_SockMutex);
+	if(m_nClientFd != -1)
+	{
+		close(m_nClientFd);
+		m_nClientFd = -1;
+	}
+	pthread_mutex_unlock (&m_SockMutex);
+}
+
+
 INT32	CThreadPoInAccFile::InitNotifyEvent()
 {
 	INT32 nRetVal = 0;
@@ -129,7 +243,8 @@ INT32	CThreadPoInAccFile::InitNotifyEvent()
 			nRetVal -= 200;
 			break;
 		}
-		nRetVal = InitShm();
+
+		nRetVal = InitSockEnv();
 		if(nRetVal < 0)
 		{
 			nRetVal -= 300;
@@ -194,11 +309,13 @@ INT32 CThreadPoInAccFile::SockWrite(INT32 nFd, PVOID pWriteData, INT32 nReqSize)
 	INT32 nWritedSize = 0;
 	INT32 nWriteSize = 0;
 	INT32 nContinueCount = 0;
+
 	char *pcWrite = NULL;
 	if(pWriteData == NULL || nReqSize < 1 || nFd == -1)
 	{
 		return -1;
 	}
+
 	pcWrite = (char *)pWriteData;
 	while (nWritedSize < nReqSize)
 	{
@@ -237,37 +354,26 @@ INT32 CThreadPoInAccFile::SockWrite(INT32 nFd, PVOID pWriteData, INT32 nReqSize)
 INT32 CThreadPoInAccFile::Run()
 {
 	// TODO: Add your specialized code here and/or call the base class
-	INT32 i, nRetVal = 0;
-	INT32 nState = 0;
-	pthread_t tid = 0;
-	PASI_CHK_PTN_FILE pChkPtnFile = NULL;
-
-	Sleep(3000);
-	tid = syscall(SYS_gettid);
-	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
+	INT32 nRetVal = 0;
+	nRetVal = LoadWhitePattern();
 	if(nRetVal < 0)
 	{
-		WriteLogE("fail to set priority: [chk_thread][%d]", errno);
-		return -2;
-	}
-
-	pChkPtnFile = (PASI_CHK_PTN_FILE)malloc(sizeof(ASI_CHK_PTN_FILE));
-	if(pChkPtnFile == NULL)
-	{
-		WriteLogE("fail to allocate memory : [%s][%d]", m_strThreadName.c_str(), errno);
-		return -2;
+		WriteLogE("[%s] fail to load white pattern : [%d]", m_strThreadName.c_str(), nRetVal);
+		return -1;
 	}
 
 	nRetVal = InitNotifyEvent();
 	if(nRetVal == 0)
 	{
 		m_nPause = 0;
+		Sleep(500);
 		SendPolicy(AS_SEND_POLICY_ALL);
 	}
 	else
 	{
 		m_nPause = 1;
-		WriteLogE("fail to init notify event : [%s][%d]", m_strThreadName.c_str(), nRetVal);
+		if(nRetVal != 301)
+			WriteLogE("fail to init notify event : [%s][%d]", m_strThreadName.c_str(), nRetVal);
 	}
 
 	m_nRunFlag = 1;
@@ -277,13 +383,12 @@ INT32 CThreadPoInAccFile::Run()
 	{
 		if(!m_nPause)
 		{
-			nRetVal = CheckShmEvent(pChkPtnFile);
-			if(nRetVal < 0)
+			nRetVal = check_proc_exist_by_name(ACCNOTIFYD_IDENT, 0);
+			if(nRetVal != ASI_PROC_EXIST)
 			{
-				UninitShm();
 				m_nPause = 1;
-				Sleep(1000);
 			}
+			Sleep(1000);
 		}
 		else
 		{
@@ -291,6 +396,7 @@ INT32 CThreadPoInAccFile::Run()
 			if(nRetVal == 0)
 			{
 				m_nPause = 0;
+				Sleep(500);
 				SendPolicy(AS_SEND_POLICY_ALL);
 			}
 			else
@@ -308,8 +414,8 @@ INT32 CThreadPoInAccFile::Run()
 	else if(!GetContinue())
 		WriteLogN("stop thread by sub continue flag : [%s]", m_strThreadName.c_str());
 
-	UninitShm();
-	safe_free(pChkPtnFile);
+	UninitSockEnv();
+	UnloadWhitePattern();
 	return 0;
 }
 
@@ -350,12 +456,101 @@ INT32 CThreadPoInAccFile::CheckWhitePatternFile()
 	return -3;
 }
 
+VOID	CThreadPoInAccFile::GetSendTime(UINT32 &nSendTime)
+{
+	pthread_mutex_lock (&m_SockMutex);
+	nSendTime = m_nSendTime;
+	pthread_mutex_unlock (&m_SockMutex);
+}
 
-INT32	CThreadPoInAccFile::SendPolicyInfo(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendCmdInfoWithLock(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
 {
 	INT32 nRetVal = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	nRetVal = check_proc_exist_by_name(ACCNOTIFYD_IDENT, 0);
+	if(nRetVal != ASI_PROC_EXIST)
+	{
+		return -3;
+	}
+	pthread_mutex_lock (&m_SockMutex);
+	do{
+		if(m_nClientFd == -1)
+		{
+			nRetVal = -4;
+			break;
+		}
+		nRetVal = SockWrite(m_nClientFd,(PVOID)pAccNotiPol, nSize);
+		if(nRetVal < 0)
+		{
+			nRetVal = -2;
+			break;
+		}
+		m_nSendTime = GetCurrentDateTimeInt();
+		nRetVal = 0;
+	}while(FALSE);
+	pthread_mutex_unlock (&m_SockMutex);
+	return 0;
+}
+
+INT32 CThreadPoInAccFile::SendAliveMessage()
+{
+	INT32 nRetVal = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	UINT32 nSendTime = GetCurrentDateTimeInt();
+	UINT32 nOldSendTime = 0;
+	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
+	return 0;
+	pAccNotiPol = (PASI_ACC_NOTIFY_POLICY)malloc(sizeof(ASI_ACC_NOTIFY_POLICY));
+	if(pAccNotiPol == NULL)
+	{
+		return -1;
+	}
+	memset(pAccNotiPol, 0, nSize);
+
+	GetSendTime(nOldSendTime);
+	pAccNotiPol->nCmdId = CMD_PIPE_ALIVE_MESSAGE;
+	do{
+		if(nSendTime - nOldSendTime < 10)
+		{
+			nRetVal = 0;
+			break;
+		}
+		nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+		if(nRetVal < 0)
+		{
+			nRetVal = -10;
+			break;
+		}
+		nRetVal = 0;
+	}while(FALSE);
+	safe_free(pAccNotiPol);
+	return nRetVal;
+}
+
+INT32	CThreadPoInAccFile::GetSendingMode()
+{
+	INT32 nSendingMode = 0;
+	pthread_mutex_lock (&m_SockMutex);
+	nSendingMode = m_nSendingMode;
+	pthread_mutex_unlock (&m_SockMutex);
+	return nSendingMode;
+}
+
+VOID	CThreadPoInAccFile::SetSendingMode(INT32 nSendingMode)
+{
+	pthread_mutex_lock (&m_SockMutex);
+	m_nSendingMode = nSendingMode;
+	pthread_mutex_unlock (&m_SockMutex);
+}
+
+INT32	CThreadPoInAccFile::SendPolicyInfo(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+{
+	INT32 nRetVal = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
@@ -364,6 +559,8 @@ INT32	CThreadPoInAccFile::SendPolicyInfo(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY
 	if(pOpPolicy != NULL)
 	{
 		pAccNotiPol->stPolInfo.nOpMode = pOpPolicy->tDPH.nUsedMode;
+		pAccNotiPol->stPolInfo.nOpID = pOpPolicy->tDPH.nID; 
+		pAccNotiPol->stPolInfo.nOpBlockMode = pOpPolicy->nBlockMode;
 	}
 
 	PDB_PO_IN_PTN_BL pBlPolicy = (PDB_PO_IN_PTN_BL)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_BL);
@@ -380,43 +577,56 @@ INT32	CThreadPoInAccFile::SendPolicyInfo(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY
 		pAccNotiPol->stPolInfo.nWLUsedMode = pWlPolicy->tDPH.nUsedMode;
 	}
 
+	PDB_PO_IN_PTN_SP pdata_sp = (PDB_PO_IN_PTN_SP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_SP);
+	if(pdata_sp)
+	{
+		pAccNotiPol->stPolInfo.nSpUsedMode = pdata_sp->tDPH.nUsedMode;
+	}
+
+	PDB_PO_IN_PTN_EX pPtnExPolicy = (PDB_PO_IN_PTN_EX)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_EX);
+	if(pPtnExPolicy)
+	{
+		pAccNotiPol->stPolInfo.nExUsedMode = pPtnExPolicy->tDPH.nUsedMode;
+	}
+
 	pAccNotiPol->nCmdId = CMD_PIPE_SET_POLICY_INFO;
-	nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
 	if(nRetVal < 0)
 	{
-		return -2;
+		nRetVal = -10;
+		return nRetVal;
 	}
 	return 0;
 }
 
-INT32	CThreadPoInAccFile::SendWhiteClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendWhiteClear(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
-	TListFileHashInfo tFileHashList;
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
 
 	pAccNotiPol->nCmdId = CMD_PIPE_CLEAR_WHITE_FILE;
-	nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
 	if(nRetVal < 0)
 	{
-		return -2;
+		nRetVal = -10;
+		return nRetVal;
 	}
 	return 0;
 }
 
-INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
+INT32	CThreadPoInAccFile::SendWhiteFile(PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
 	INT32 nSend = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
 	TListFileHashInfo tFileHashList;
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
@@ -437,55 +647,52 @@ INT32	CThreadPoInAccFile::SendWhiteFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 	begin = tFileHashList.begin();	end = tFileHashList.end();
 	for(begin; begin != end; begin++)
 	{
-		if(!_strnicmp(begin->acFullPath, "/bin/", 5) || strstr(begin->acFullPath, "_file_") != NULL)
+		strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
+		pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
+		strncpy(pAccNotiPol->stFileHash.acWhiteHash, begin->acWhiteHash, SHA512_BLOCK_SIZE);
+		pAccNotiPol->stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+		if(nRetVal < 0)
 		{
-			strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
-			pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
-			strncpy(pAccNotiPol->stFileHash.acWhiteHash, begin->acWhiteHash, SHA512_BLOCK_SIZE);
-			pAccNotiPol->stFileHash.acFullPath[SHA512_BLOCK_SIZE] = 0;
-			nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
-			if(nRetVal < 0)
-			{
-				tFileHashList.clear();
-				return -2;
-			}
-			nSend++;
+			tFileHashList.clear();
+			nRetVal = -10;
+			return nRetVal;
 		}
+		nSend++;
 	}
 	tFileHashList.clear();
 	nSendCount = nSend++;
 	return 0;
 }
 
-INT32	CThreadPoInAccFile::SendBlackClear(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendBlackClear(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
-	TListFileHashInfo tFileHashList;
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
 
 	pAccNotiPol->nCmdId = CMD_PIPE_CLEAR_BLACK_FILE;
-	nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
 	if(nRetVal < 0)
 	{
-		return -2;
+		nRetVal = -10;
+		return nRetVal;
 	}
 	return 0;
 }
 
-
-INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
+INT32	CThreadPoInAccFile::SendBlackFile(PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
 	INT32 nSend = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
 	TListFileHashInfo tFileHashList;
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
@@ -506,160 +713,474 @@ INT32	CThreadPoInAccFile::SendBlackFile(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY 
 	begin = tFileHashList.begin();	end = tFileHashList.end();
 	for(begin; begin != end; begin++)
 	{
-		if(!_strnicmp(begin->acFullPath, "/bin/", 5) || strstr(begin->acFullPath, "_file_") != NULL)
+		strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
+		pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
+		strncpy(pAccNotiPol->stFileHash.acWhiteHash, begin->acWhiteHash, SHA512_BLOCK_SIZE);
+		pAccNotiPol->stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+		if(nRetVal < 0)
 		{
-			strncpy(pAccNotiPol->stFileHash.acFullPath, begin->acFullPath, MAX_PATH-1);
-			pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
-			strncpy(pAccNotiPol->stFileHash.acWhiteHash, begin->acWhiteHash, SHA512_BLOCK_SIZE);
-			pAccNotiPol->stFileHash.acFullPath[SHA512_BLOCK_SIZE] = 0;
-			nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
-			if(nRetVal < 0)
-			{
-				tFileHashList.clear();
-				return -2;
-			}
-			nSend++;
+			tFileHashList.clear();
+			nRetVal -= 10;
+			return nRetVal;
 		}
+		nSend++;
 	}
 	tFileHashList.clear();
 	nSendCount = nSend;
 	return 0;
 }
 
-INT32	CThreadPoInAccFile::SendEndPolicy(INT32 nClientFd, PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+INT32	CThreadPoInAccFile::SendSpClear(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
 {
 	INT32 nRetVal = 0;
 	INT32 nCount = 0;
 	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
-	TListFileHashInfo tFileHashList;
-	if(nClientFd < 0 || pAccNotiPol == NULL)
+	if(pAccNotiPol == NULL)
 		return -1;
 
 	memset(pAccNotiPol, 0, nSize);
 
-	pAccNotiPol->nCmdId = CMD_PIPE_END_POLICY_INFO;
-	nRetVal = SockWrite(nClientFd,(PVOID)pAccNotiPol, nSize);
+	pAccNotiPol->nCmdId = CMD_PIPE_CLEAR_SP_FILE;
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
 	if(nRetVal < 0)
+	{
+		nRetVal = -10;
+		return nRetVal;
+	}
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendSpFile(PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
+{
+	INT32 nRetVal = 0;
+	INT32 nCount = 0;
+	INT32 nSend = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	ASI_WENG_WL_EX tAWWE;
+	DWORD dwFileType = 0;
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	memset(pAccNotiPol, 0, nSize);
+
+	TListDBPoInPtnSPRule tRuleList;
+	TListDBPoInPtnSPRuleItor begin, end;
+	PDB_PO_IN_PTN_SP_RULE pdata_rule = NULL;
+	t_ManagePoInPtnSPRule->GetItemCopy(tRuleList);
+
+	begin = tRuleList.begin();	end = tRuleList.end();
+	for(begin; begin != end; begin++)
+	{
+		pdata_rule = &(*begin);
+		if(!pdata_rule)
+			continue;
+
+		if(pdata_rule->tDPH.nUsedMode == STATUS_USED_MODE_OFF)
+			continue;	
+		if(pdata_rule->nConfirmRst == SS_PO_IN_PTN_SP_RULE_CONFIRM_RST_TYPE_WAIT)
+			continue;
+		if(pdata_rule->nConfirmRst == SS_PO_IN_PTN_SP_RULE_CONFIRM_RST_TYPE_END)
+			continue;
+		if(pdata_rule->nConfirmRst == SS_PO_IN_PTN_SP_RULE_CONFIRM_RST_TYPE_END_FOREVER)
+			continue;
+		if(pdata_rule->nEndDate)
+			continue;
+		if(pdata_rule->strFilePath.empty() || pdata_rule->strFileName.empty())
+			continue;
+		snprintf(pAccNotiPol->stFileHash.acFullPath, MAX_PATH-1, "%s/%s", pdata_rule->strFilePath.c_str(), pdata_rule->strFileName.c_str());
+		pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
+		dwFileType = 0;
+		memset(&tAWWE, 0, sizeof(ASI_WENG_WL_EX));
+		if(m_tWEDLLUtil.GetWL(pAccNotiPol->stFileHash.acFullPath, (PVOID)&tAWWE, sizeof(tAWWE), &dwFileType) == ERROR_SUCCESS && dwFileType != AS_INVALID_FILE)
+		{
+			strncpy(pAccNotiPol->stFileHash.acWhiteHash, tAWWE.acWhiteHash, SHA512_BLOCK_SIZE);
+			pAccNotiPol->stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+			if(pdata_rule->nConfirmRst == SS_PO_IN_PTN_SP_RULE_CONFIRM_RST_TYPE_DENY)
+			{
+				pAccNotiPol->nCmdId = CMD_PIPE_ADD_DENY_SP_FILE;
+			}
+			else
+			{
+				pAccNotiPol->nCmdId = CMD_PIPE_ADD_ALLOW_SP_FILE;
+			}
+			nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+			if(nRetVal < 0)
+			{
+				nRetVal -= 10;
+				return nRetVal;
+			}
+			nSendCount++;
+		}
+	}
+	nSendCount = nSend;
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendExClear(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+{
+	INT32 nRetVal = 0;
+	INT32 nCount = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	memset(pAccNotiPol, 0, nSize);
+
+	pAccNotiPol->nCmdId = CMD_PIPE_CLEAR_EX_FILE;
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+	if(nRetVal < 0)
+	{
+		nRetVal = -10;
+		return nRetVal;
+	}
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendExFile(PASI_ACC_NOTIFY_POLICY pAccNotiPol, INT32 &nSendCount)
+{
+	INT32 nRetVal = 0;
+	INT32 nCount = 0;
+	INT32 nSend = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	ASI_WENG_WL_EX tAWWE;
+	DWORD dwFileType = 0;
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	memset(pAccNotiPol, 0, nSize);
+
+	TListID tIDList;
+	TListIDItor begin, end;
+	t_ManagePoInPtnExPkg->GetUnitIDListByChkOrder(tIDList);
+
+	begin = tIDList.begin();	end = tIDList.end();
+	for(begin; begin != end; begin++)
+	{
+		PDB_PO_IN_PTN_EX_UNIT pdata_unit = t_ManagePoInPtnExUnit->FindItem(*begin);
+		if(!pdata_unit)
+			continue;
+
+		if(pdata_unit->tDPH.nUsedMode == STATUS_USED_MODE_OFF)
+			continue;		
+
+		memset(&tAWWE, 0, sizeof(ASI_WENG_WL_EX));
+		snprintf(pAccNotiPol->stFileHash.acFullPath, MAX_PATH-1, "%s", pdata_unit->tDFI.strPath.c_str(), MAX_PATH-1);
+		pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
+		dwFileType = 0;
+		if(m_tWEDLLUtil.GetWL(pAccNotiPol->stFileHash.acFullPath, (PVOID)&tAWWE, sizeof(tAWWE), &dwFileType) == ERROR_SUCCESS && dwFileType != AS_INVALID_FILE)
+		{
+			strncpy(pAccNotiPol->stFileHash.acWhiteHash, tAWWE.acWhiteHash, SHA512_BLOCK_SIZE);
+			pAccNotiPol->stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+			if(pdata_unit->nBlockMode == SS_PO_IN_PTN_EX_BLOCK_TYPE_DENY)
+			{
+				pAccNotiPol->nCmdId = CMD_PIPE_ADD_DENY_EX_FILE;
+			}
+			else
+			{
+				pAccNotiPol->nCmdId = CMD_PIPE_ADD_ALLOW_EX_FILE;
+			}
+			nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+			if(nRetVal < 0)
+			{
+				nRetVal -= 10;
+				return nRetVal;
+			}
+			nSendCount++;
+		
+		}
+	}
+	nSendCount = nSend;
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendAddCreateFile(char *acFullPath, char *acWhiteHash)
+{
+	INT32 nRetVal = 0;
+	INT32 i, nSendingMode = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
+
+	if(acFullPath == NULL || acWhiteHash == NULL)
+	{
+		return -1;
+	}
+
+	if(acFullPath[0] == 0 || acWhiteHash[0] == 0)
 	{
 		return -2;
 	}
+
+	pAccNotiPol = (PASI_ACC_NOTIFY_POLICY)malloc(sizeof(ASI_ACC_NOTIFY_POLICY));
+	if(pAccNotiPol == NULL)
+	{
+		return -3;
+	}
+	memset(pAccNotiPol, 0, sizeof(ASI_ACC_NOTIFY_POLICY));
+
+	for(i=0; i<300; i++)
+	{
+		nSendingMode = GetSendingMode();
+		if(nSendingMode == 0)
+			break;
+		Sleep(100);
+	}
+	if(nSendingMode == 1)
+	{
+		WriteLogE("[%s] fail to send policy : [%d]", m_strThreadName.c_str(), errno);
+		safe_free(pAccNotiPol);
+		return -4;
+	}
+	SetSendingMode(1);
+
+	strncpy(pAccNotiPol->stFileHash.acFullPath, acFullPath, MAX_PATH-1);
+	pAccNotiPol->stFileHash.acFullPath[MAX_PATH-1] = 0;
+	
+	strncpy(pAccNotiPol->stFileHash.acWhiteHash, acWhiteHash, SHA512_BLOCK_SIZE);
+	pAccNotiPol->stFileHash.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+
+	pAccNotiPol->nCmdId = CMD_PIPE_ADD_CREATE_FILE;
+
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+	if(nRetVal < 0)
+	{
+		nRetVal = -10;
+		SetSendingMode(0);
+		safe_free(pAccNotiPol);
+		return nRetVal;
+	}
+	SetSendingMode(0);
+	safe_free(pAccNotiPol);
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendClearCreateFile()
+{
+	INT32 nRetVal = 0;
+	INT32 i, nSendingMode = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
+	pAccNotiPol = (PASI_ACC_NOTIFY_POLICY)malloc(sizeof(ASI_ACC_NOTIFY_POLICY));
+	if(pAccNotiPol == NULL)
+	{
+		return -1;
+	}
+	memset(pAccNotiPol, 0, sizeof(ASI_ACC_NOTIFY_POLICY));
+
+	for(i=0; i<300; i++)
+	{
+		nSendingMode = GetSendingMode();
+		if(nSendingMode == 0)
+			break;
+		Sleep(100);
+	}
+	if(nSendingMode == 1)
+	{
+		WriteLogE("[%s] fail to send policy : [%d]", m_strThreadName.c_str(), errno);
+		safe_free(pAccNotiPol);
+		return -2;
+	}
+	SetSendingMode(1);
+
+	nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+	if(nRetVal < 0)
+	{
+		SetSendingMode(0);
+		safe_free(pAccNotiPol);
+		nRetVal = -10;
+		return nRetVal;
+	}
+	SetSendingMode(0);
+	safe_free(pAccNotiPol);
+	return 0;
+}
+
+
+INT32	CThreadPoInAccFile::SendStartPolicy(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+{
+	INT32 nRetVal = 0;
+	INT32 nCount = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	memset(pAccNotiPol, 0, nSize);
+	do{
+		pAccNotiPol->nCmdId = CMD_PIPE_START_POLICY_INFO;
+		nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+		if(nRetVal < 0)
+		{
+			nRetVal -= 10;
+			break;
+		}
+		nRetVal = 0;
+	}while(FALSE);
+	return 0;
+}
+
+INT32	CThreadPoInAccFile::SendEndPolicy(PASI_ACC_NOTIFY_POLICY pAccNotiPol)
+{
+	INT32 nRetVal = 0;
+	INT32 nCount = 0;
+	INT32 nSize = sizeof(ASI_ACC_NOTIFY_POLICY);
+	if(pAccNotiPol == NULL)
+		return -1;
+
+	memset(pAccNotiPol, 0, nSize);
+	do{
+		pAccNotiPol->nCmdId = CMD_PIPE_END_POLICY_INFO;
+		nRetVal = SendCmdInfoWithLock(pAccNotiPol);
+		if(nRetVal < 0)
+		{
+			nRetVal -= 10;
+			break;
+		}
+		nRetVal = 0;
+	}while(FALSE);
 	return 0;
 }
 
 
 INT32	CThreadPoInAccFile::SendPolicy(INT32 nSendFlag)
 {
-	INT32 nClientFd = -1;
 	INT32 nRetVal = 0;
-	INT32 nState = 0;
-	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
-	INT32 nClientLen = 0;
 	INT32 nSendCnt = 0;
-	struct sockaddr_un stClientAddr;
-	char acSockPath[MAX_FILE_NAME] = {0,};
-
-	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_POL_FILE);
-	acSockPath[MAX_FILE_NAME-1] = 0;
-
-	if(is_file(acSockPath) != SOCK_FILE)
+	INT32 i, nSendingMode = 0;
+	PASI_ACC_NOTIFY_POLICY pAccNotiPol = NULL;
+	pAccNotiPol = (PASI_ACC_NOTIFY_POLICY)malloc(sizeof(ASI_ACC_NOTIFY_POLICY));
+	if(pAccNotiPol == NULL)
 	{
-		return 0;
+		WriteLogE("[%s] fail to allocate memory : [%d]", m_strThreadName.c_str(), errno);
+		return -1;
 	}
-
+	memset(pAccNotiPol, 0, sizeof(ASI_ACC_NOTIFY_POLICY));
+	for(i=0; i<300; i++)
+	{
+		nSendingMode = GetSendingMode();
+		if(nSendingMode == 0)
+			break;
+		Sleep(100);
+	}
+	if(nSendingMode == 1)
+	{
+		WriteLogE("[%s] fail to send policy : [%d]", m_strThreadName.c_str(), errno);
+		safe_free(pAccNotiPol);
+		return -2;
+	}
+	SetSendingMode(1);
 	do{
-		pAccNotiPol = (PASI_ACC_NOTIFY_POLICY)malloc(sizeof(ASI_ACC_NOTIFY_POLICY));
-		if(pAccNotiPol == NULL)
+		if(nSendFlag & AS_SEND_START_POLICY)
 		{
-			WriteLogE("[SendPolicy] fail to allocate memory (%d)", errno);
-			nRetVal = -1;
-			break;
-		}
-		nClientFd = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (nClientFd == -1)
-		{
-			WriteLogE("[SendPolicy] fail to create sock (%d)", errno);
-			nRetVal = -2;
-			break;
-		}
-
-
-		nClientLen = sizeof(stClientAddr);
-		memset(&stClientAddr, 0, nClientLen);
-		stClientAddr.sun_family = AF_UNIX;
-		strncpy(stClientAddr.sun_path, acSockPath, MAX_FILE_NAME-1);
-		nRetVal = connect(nClientFd, (struct sockaddr *)&stClientAddr, nClientLen);
-		if (nRetVal < 0)
-		{
-			if(errno != 111)
-				WriteLogE("[SendPolicy] fail to connect %s (%d)", acSockPath, errno);
-			nRetVal = -3;
-			break;
-		}
-		if(nSendFlag & AS_SEND_POLICY_INFO)
-		{
-			nRetVal = SendPolicyInfo(nClientFd, pAccNotiPol);
+			nRetVal = SendStartPolicy(pAccNotiPol);
 			if (nRetVal < 0)
 			{
-				WriteLogE("[SendPolicy] fail to send policy info %d (%d)", nRetVal, errno);
+				WriteLogE("[SendPolicy] fail to send start policy cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
 				nRetVal -= 10;
 				break;
 			}
-			else
-				WriteLogN("success to send policy info");
+		}
+
+		if(nSendFlag & AS_SEND_POLICY_INFO)
+		{
+			nRetVal = SendPolicyInfo(pAccNotiPol);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send policy info %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 20;
+				break;
+			}
+			WriteLogN("[%s] success to send policy info", m_strThreadName.c_str());
 		}
 		if(nSendFlag & AS_SEND_WHITE_FILE)
 		{
-			nRetVal = SendWhiteClear(nClientFd, pAccNotiPol);
+			nRetVal = SendWhiteClear(pAccNotiPol);
 			if (nRetVal < 0)
 			{
-				WriteLogE("[SendPolicy] fail to send white file %d (%d)", nRetVal, errno);
-				nRetVal -= 20;
+				WriteLogE("[%s] fail to send white file clear cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 70;
 				break;
 			}
 			nSendCnt = 0;
-			nRetVal = SendWhiteFile(nClientFd, pAccNotiPol, nSendCnt);
+			nRetVal = SendWhiteFile(pAccNotiPol, nSendCnt);
 			if (nRetVal < 0)
 			{
-				WriteLogE("[SendPolicy] fail to send white file %d (%d)", nRetVal, errno);
-				nRetVal -= 20;
+				WriteLogE("[%s] fail to send white file %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 80;
 				break;
 			}
-			else
-				WriteLogN("success to send white file %d", nSendCnt);
+			WriteLogN("[%s] success to send white file %d", m_strThreadName.c_str(), nSendCnt);
 		}
 		if(nSendFlag & AS_SEND_BLACK_FILE)
 		{
-			nRetVal = SendBlackClear(nClientFd, pAccNotiPol);
+			nRetVal = SendBlackClear(pAccNotiPol);
 			if (nRetVal < 0)
 			{
-				WriteLogE("[SendPolicy] fail to send white file %d (%d)", nRetVal, errno);
-				nRetVal -= 20;
+				WriteLogE("[%s] fail to send black file clear cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 90;
 				break;
 			}
 			nSendCnt = 0;
-			nRetVal = SendBlackFile(nClientFd, pAccNotiPol, nSendCnt);
+			nRetVal = SendBlackFile(pAccNotiPol, nSendCnt);
 			if (nRetVal < 0)
 			{
-				WriteLogE("[SendPolicy] fail to send black file %d (%d)", nRetVal, errno);
-				nRetVal -= 30;
+				WriteLogE("[%s] fail to send black file %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 100;
 				break;
 			}
 			else
-				WriteLogN("success to send black file %d", nSendCnt);
+				WriteLogN("[%s] success to send black file %d", m_strThreadName.c_str(), nSendCnt);
 		}
-		nRetVal = SendEndPolicy(nClientFd, pAccNotiPol);
-		if (nRetVal < 0)
+		if(nSendFlag & AS_SEND_SP_FILE)
 		{
-			WriteLogE("[SendPolicy] fail to send end policy cmd %d (%d)", nRetVal, errno);
-			nRetVal -= 40;
-			break;
+			nRetVal = SendSpClear(pAccNotiPol);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send sp file clear cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 30;
+				break;
+			}
+			nSendCnt = 0;
+			nRetVal = SendSpFile(pAccNotiPol, nSendCnt);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send sp file %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 40;
+				break;
+			}
+			WriteLogN("[%s] success to send sp file %d", m_strThreadName.c_str(), nSendCnt);
+		}
+		if(nSendFlag & AS_SEND_EX_FILE)
+		{
+			nRetVal = SendExClear(pAccNotiPol);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send ex file clear cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 50;
+				break;
+			}
+			nSendCnt = 0;
+			nRetVal = SendExFile(pAccNotiPol, nSendCnt);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send ex file %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 60;
+				break;
+			}
+			WriteLogN("[%s] success to send ex file %d", m_strThreadName.c_str(), nSendCnt);
+		}
+		if(nSendFlag & AS_SEND_END_POLICY)
+		{
+			nRetVal = SendEndPolicy(pAccNotiPol);
+			if (nRetVal < 0)
+			{
+				WriteLogE("[%s] fail to send end policy cmd %d (%d)", m_strThreadName.c_str(), nRetVal, errno);
+				nRetVal -= 110;
+				break;
+			}
 		}
 		nRetVal = 0;
 	}while(FALSE);
-	if(nClientFd != -1)
-	{
-		close(nClientFd);
-	}
+	SetSendingMode(0);
 	safe_free(pAccNotiPol);
 	return nRetVal;
 }
@@ -756,10 +1277,6 @@ INT32		CThreadPoInAccFile::CheckShmEvent(PASI_CHK_PTN_FILE pChkPtnFile)
 				}
 #endif /*_PERP_TEST_LOG*/
 			}
-		}
-		else if(pChkPtnFile->stCHKFILE.nCmdId == CMD_PIPE_REQ_ACCESS_INFO)
-		{
-			SendPolicy(AS_SEND_POLICY_ALL);
 		}
 		nRetVal = 0;
 	}while(FALSE);
