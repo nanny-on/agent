@@ -78,6 +78,81 @@ void get_current_date_time(char *pcBuf)
 }
 
 
+INT32 start_svc()
+{
+	pid_t pid = -1;
+	INT32 status = 0;
+	INT32 nRetVal = 0;
+	char acTime[MAX_TIME_STR] = {0,};
+
+	pid = fork();
+	if (pid < 0)
+	{
+		return -2;
+	}
+	else if (pid == 0)
+	{
+		nRetVal = execlp("/usr/local/ashin/nanny/bin/startup_fna.sh", "startup_fna.sh", NULL);
+		if(nRetVal < 0)
+		{
+			get_current_date_time(acTime);
+			fprintf(stderr, "[%s] fail to start startup_fna.sh\n", acTime);
+		}
+		exit(127);
+	}
+	else
+	{
+		while(waitpid(pid, &status, 0) < 0)
+		{
+			if(errno != EINTR)
+			{
+				nRetVal = -3;
+				break;
+			}
+		}
+	}
+
+	return nRetVal;
+}
+
+INT32 stop_svc()
+{
+	pid_t pid = -1;
+	INT32 status = 0;
+	INT32 nRetVal = 0;
+	char acTime[MAX_TIME_STR] = {0,};
+
+	pid = fork();
+	if (pid < 0)
+	{
+		return -2;
+	}
+	else if (pid == 0)
+	{
+		nRetVal = execlp("/usr/local/ashin/nanny/bin/shutdown_fna.sh", "shutdown_fna.sh", NULL);
+		if(nRetVal < 0)
+		{
+			get_current_date_time(acTime);
+			fprintf(stderr, "[%s] fail to start shutdown_fna.sh\n", acTime);
+		}
+		exit(127);
+	}
+	else
+	{
+		while(waitpid(pid, &status, 0) < 0)
+		{
+			if(errno != EINTR)
+			{
+				nRetVal = -3;
+				break;
+			}
+		}
+	}
+
+	return nRetVal;
+}
+
+
 INT32 write_pgm(char *acFullPath)
 {
 	pid_t pid = -1;
@@ -250,6 +325,7 @@ int main(int argc, char* argv[])
 	if (pDir == NULL)
 	{
 		fprintf(stderr, "fail to open dir %s (%d)\n", acPath, errno);
+		stop_svc();
 		exit(4);
 	}
 
@@ -267,6 +343,7 @@ int main(int argc, char* argv[])
 			if(nRetVal != 0)
 			{
 				fprintf(stderr, "fail to write %s (%d) (%d)\n", acFullPath, nRetVal, errno);
+				stop_svc();
 				exit(5);
 			}
 			nCount++;
@@ -280,7 +357,6 @@ int main(int argc, char* argv[])
 	closedir(pDir);
 
 	fprintf(stdout, "success to test write_test_pgm %s's %d files\n", acPath, nCount);
-
 	return 0;
 }
 
