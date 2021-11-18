@@ -90,8 +90,6 @@ INT32		CExecuteFileUtil::ExecuteFile(LPVOID lParam)
 		{
 			WriteLogN("[%s] change wptn on file success [%d]..", m_strUtilName.c_str(), nChgWPtn);
 			t_LogicMgrPoInPtnExTrust->CheckPtnLifeCycle();
-			if(t_ThreadPoInPtnFile != NULL)
-				t_ThreadPoInPtnFile->ClearPtnRet();
 			t_ThreadTimer->t_TimerUtil.EnableTimer(TIMER_ID_POLICY_APPLY_EPS);
 		}
 	}
@@ -837,9 +835,8 @@ INT32		CExecuteFileUtil::ExecuteFile_WPtnGBO(INT32& nChgWPtn)
 				WriteLogE("[%s] can not reload gbo ptn file  : [%s]", m_strUtilName.c_str(), strSvName.c_str());
 				break;
 			}
-
 			if(t_ThreadPoInAccFile != NULL)
-				t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_START_POLICY | AS_SEND_BLACK_FILE | AS_SEND_END_POLICY);
 
 			nChgWPtn = 1;
 			unlink((char *)strDwName.c_str());
@@ -915,8 +912,7 @@ INT32		CExecuteFileUtil::ExecuteFile_WPtnGWO(INT32& nChgWPtn)
 				break;
 			}
 			if(t_ThreadPoInAccFile != NULL)
-				t_ThreadPoInAccFile->SendPolicy(AS_SEND_WHITE_FILE | AS_SEND_BLACK_FILE);
-
+				t_ThreadPoInAccFile->SendPolicy(AS_SEND_START_POLICY | AS_SEND_WHITE_FILE | AS_SEND_END_POLICY);
 			nChgWPtn = 1;
 			unlink((char *)strDwName.c_str());
 		} while (FALSE);		
