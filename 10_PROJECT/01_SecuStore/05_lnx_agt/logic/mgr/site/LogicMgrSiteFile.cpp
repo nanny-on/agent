@@ -231,15 +231,17 @@ void		CLogicMgrSiteFile::CheckSiteFile(PDB_SITE_FILE pdsf_src)
 	SetSiteFile(&stDsf, FALSE);
 }
 
-void		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
+INT32		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
 {
 	DB_SITE_FILE dsf;
 	PDB_SITE_FILE pFindDsf = NULL;
 	INT32 nSize = sizeof(DB_SITE_FILE);
 	CHAR szSha256[ASIHASH_SHA_TYPE_256_LEN+2] = {0, };
 
-	if(pChkFile == NULL || nSize < 1)
-		return;
+	if(pChkFile == NULL)
+	{
+		return -1;
+	}
 
 	dsf.strFeKey = pChkFile->stRetInfo.acWhiteHash;
 	dsf.strFilePath = pChkFile->stFileInfo.acPath;
@@ -271,45 +273,39 @@ void		CLogicMgrSiteFile::CheckSiteCreateFile(PASI_CHK_FILE_PROC pChkFile)
 		dsf.strFileHash = szSha256;
 		dsf.nFileSize = GetFileSizeExt(pChkFile->stFileInfo.acFullPath);
 	}
+	if(t_ThreadPoInAccFile)
+		t_ThreadPoInAccFile->SendAddCreateFile(pChkFile->stFileInfo.acFullPath, pChkFile->stRetInfo.acWhiteHash);
 
-	SetSiteFile(&dsf, TRUE);
+	return SetSiteFile(&dsf, TRUE);
 }
 //---------------------------------------------------------------------------
 
-void		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
+INT32		CLogicMgrSiteFile::SetSiteFile(PDB_SITE_FILE pDsf, BOOL bRealTime)
 {
 	INT32 nOldItem = 0;
-	BOOL bSendServer = FALSE;
+	INT32 i, nRetVal = 0;
 	if(pDsf == NULL)
-		return;
+		return -1;
 	nOldItem = pDsf->nID;
 	t_ManageSiteFile->ApplySiteFile(*pDsf);
 	PDB_PO_IN_PTN_OP pdata = (PDB_PO_IN_PTN_OP)t_DeployPolicyUtil->GetCurPoPtr(SS_POLICY_TYPE_IN_PTN_OP);
 	if(pdata && (pdata->nRTFGMode & SS_PO_IN_PTN_OP_NEW_FILE_SEND_TYPE_INFO) && ((pDsf->nSyncSvrStep & SS_PO_FE_PTN_OP_NEW_FILE_SEND_TYPE_INFO)))
 	{
-		bSendServer = TRUE;
 		if(bRealTime)
 			WriteLogN("[%s] remain real-time created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
 		else
 			WriteLogN("[%s] remain created file to server with in_ptn_op : fp[%s/%s] key[%s]", m_strLogicName.c_str(), pDsf->strFilePath.c_str(), pDsf->strFileName.c_str(), pDsf->strFeKey.c_str());
-	}
-
-
-	m_tMutex.Lock();
-	SendToken.Set(1024);
-	SendToken.TokenAdd_32(1);
-	t_ManageSiteFile->SetPkt(pDsf, SendToken);
-		
-	if(!nOldItem)
-	{
-		SendData_Link(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
-	}
-	if(bSendServer == TRUE)
-	{
+		m_tMutex.Lock();
+		SendToken.Set(1024);
+		SendToken.TokenAdd_32(1);
+		t_ManageSiteFile->SetPkt(pDsf, SendToken);
+	
 		SendData_Mgr(G_TYPE_SITE_FILE, G_CODE_COMMON_SYNC, SendToken);
+		SendToken.Clear();
+		m_tMutex.UnLock();
+		nRetVal = 0;
 	}
-	SendToken.Clear();
-	m_tMutex.UnLock();
+	return nRetVal;
 }
 //---------------------------------------------------------------------------
 
