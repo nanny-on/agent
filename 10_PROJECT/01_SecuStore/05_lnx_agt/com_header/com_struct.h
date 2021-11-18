@@ -178,6 +178,8 @@
 #include	"ThreadPoFaExPopup.h"
 #include	"ThreadPoInPtnFile.h"
 #include	"ThreadPoInAccFile.h"
+#include	"ThreadPoInCreateLog.h"
+#include	"ThreadPoInCreateFile.h"
 #include	"ThreadPoInSpReq.h"
 ///////////////////////////////////////////////////////////////////////
 
