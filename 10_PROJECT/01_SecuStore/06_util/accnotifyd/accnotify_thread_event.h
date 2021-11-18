@@ -19,7 +19,7 @@
 #ifndef _ACCNOTIFY_THREAD_EVENT_H__
 #define _ACCNOTIFY_THREAD_EVENT_H__
 
-#define ASI_ACCNOTIFY_PATH "/bin"
+#define ASI_ACCNOTIFY_PATH "/"
 
 /////////////////////////////////////////////////////////////////////////////
 class CThreadAccNotifyEvent : public CThreadBase
@@ -30,16 +30,11 @@ public:
 
 private:
 	INT32						m_nAccNotifyFd;
-	INT32						m_nShmId;
-	char *						m_pString;
-	BOOL						m_bIsConnected;
 	UINT32						m_nAccNotifyCount;
 	UINT32						m_nAccNotifyIndex;
-	UINT32						m_nSendTime;
 	pthread_mutex_t 			m_EventMutex;
 	TMapFaNotifyPath			m_tAccNotifyEventMap;
 	HWND						m_pNotifyWnd;
-	char						m_acSrcPath[MAX_PATH];
 private:
 	INT32						InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMode);
 	VOID						UninitAccNotifyEvent(INT32 nTestMode);
@@ -57,12 +52,6 @@ private:
 	INT32						RemoveWatchAccNotify(char *pPath);
 	INT32						CheckWhitePatternFile();
 
-	INT32						InitShmEnv();
-	VOID						UninitShmEnv();
-	BOOL						IsSockConnected();
-	INT32						ShmRecv(PVOID pRecvData, INT32 nReqSize);
-	INT32						ShmWrite(PVOID pWriteData, INT32 nReqSize);
-
 	BOOL						InitAccNotifyFd(INT32 &nNotifyFd);
 	BOOL						GetAccNotifyFd(INT32 &nNotifyFd);
 	VOID						CloseAccNotifyFd();
@@ -70,16 +59,21 @@ private:
 	INT32						AddAccNotifyMark(INT32 nNotifyFd, PFANOTIFY_PATH pAccNotifyPath);
 	INT32						RemoveAccNotifyMark(PFANOTIFY_PATH pAccNotifyPath);
 
-	BOOL						ParseFilePath(PASI_CHK_INFO pInfo);
-	BOOL						GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcInfo);
-	INT32						ChkInPtn(PASI_CHK_FILE_PROC pChkFileProc, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType);
-	VOID						SetRetValValue(ASI_RET_INFO *pstRetInfo, INT32 nAcVal, INT32 nBlockMode, INT32 nIsWarning, INT32 nPolicyType);
-	INT32						AnalyzeAccEvent(PASI_CHK_FILE_PROC pChkFileProc);BOOL						GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo);
-	INT32						SendEventToServer(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc);
-	INT32						SendReqPoliyToServer(PASI_CHK_FILE_PROC pChkFileProc);
-	INT32						AnalyzeAccNotifyEvent(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc);
-	INT32						CheckAccNotifyFile(INT32 nNotifyFd, char *pcBuffer, PASI_CHK_FILE_PROC pChkFileProc);
-	INT32						AnalyzeAccNotifyEvent2(PASI_CHK_FILE_PROC pChkFileProc, INT32 nCount);
+	static BOOL					ParseFilePath(PASI_CHK_INFO pInfo);
+	static BOOL					GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcInfo);
+	static INT32				ChkInPtnEx(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType);
+	static INT32				ChkInPtnSP(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType);
+	static INT32				ChkInPtn(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType);
+
+	static VOID					SetReturnValue(ASI_RET_INFO *pstRetInfo, INT32 nAcVal, INT32 nBlockMode, INT32 nIsWarning, INT32 nPolicyType);
+	static INT32				CheckPolicyInfo(ASI_POLICY_INFO &stPolicyInfo);
+	static INT32				AnalyzeAccEvent(PASI_CHK_FILE_PROC pChkFileProc);
+	static BOOL					GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo);
+	static INT32				BypassObjectPath(PASI_CHK_FILE_PROC pChkFileProc);
+	static INT32				AnalyzeWithPolicyServer(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc);
+	static INT32				AnalyzeAccNotifyEvent(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc);
+	static INT32				CheckAccNotifyFile(INT32 nNotifyFd, char *pcBuffer, PASI_CHK_FILE_PROC pChkFileProc);
+	static INT32				AnalyzeAccNotifyEvent2(PASI_CHK_FILE_PROC pChkFileProc, INT32 nCount);
 // Operations
 public:
 	INT32						SetNotifyWnd(HWND pNotifyWnd);
@@ -106,4 +100,4 @@ extern	CThreadAccNotifyEvent*	t_ThreadAccNotifyEvent;
 
 /////////////////////////////////////////////////////////////////////////////
 
-#endif //_THREAD_PO_IN_PTN_FILE_H__
+#endif //_ACCNOTIFY_THREAD_EVENT_H__

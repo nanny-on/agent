@@ -2,7 +2,7 @@ include ../../../../build.config
 
 CFLAGS = $(DEFINES) $(INCLUDES)
 
-CPPFILES = accnotify_timer.cpp accnotify_thread_base.cpp accnotify_thread.cpp accnotify_thread_event.cpp accnotify_thread_policy.cpp accnotify_dlg.cpp accnotify_mon.cpp
+CPPFILES = accnotify_timer.cpp accnotify_thread_base.cpp accnotify_thread.cpp accnotify_thread_event.cpp accnotify_thread_policy.cpp accnotify_thread_server_socket.cpp accnotify_thread_client_socket.cpp accnotify_dlg.cpp accnotify_mon.cpp
 
 OBJ = $(CPPFILES:.cpp=.o)
 

@@ -22,23 +22,23 @@
 #include "stdafx.h"
 #include "com_struct.h"
 #include "accnotify_dlg.h"
+#include "accnotify_thread_client_socket.h"
+#include "accnotify_thread_server_socket.h"
 #include "accnotify_thread_event.h"
-
-#define FAN_OPEN_PERM   0x00010000
 
 /////////////////////////////////////////////////////////////////////////////
 // CThreadAccNotifyEvent
 
 CThreadAccNotifyEvent*	t_ThreadAccNotifyEvent = NULL;
 
+static char					g_acSrcPath[MAX_PATH];
+
 CThreadAccNotifyEvent::CThreadAccNotifyEvent()
 {
-	m_nShmId = -1;
+	m_nAccNotifyFd = -1;
 	m_nAccNotifyCount = 0;
 	m_nAccNotifyIndex = 0;
 	m_pNotifyWnd = NULL;
-	m_pString = NULL;
-	m_bIsConnected = FALSE;
 	pthread_mutex_init(&m_EventMutex, NULL);
 }
 
@@ -57,98 +57,10 @@ INT32	CThreadAccNotifyEvent::SetNotifyWnd(HWND pNotifyWnd)
 	return 0;
 }
 
-INT32	CThreadAccNotifyEvent::InitShmEnv()
-{
-	INT32 nRetVal = 0;
-	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
-
-	do{
-		if(m_nShmId == -1)
-		{
-			m_nShmId = shmget((key_t)SM_CHK_ACCESS_FILE_KEY, 0, NULL);
-			if(m_nShmId == -1)
-			{
-				if(t_AccNotifyDlg != NULL)
-					t_AccNotifyDlg->WriteLogE("fail to get shared memory(%d)", errno);
-				nRetVal = -1;
-				break;
-			}
-		}
-
-		m_pString = (char *)shmat(m_nShmId, NULL, 0);
-		if(m_pString == (char *)-1)
-		{
-			if(t_AccNotifyDlg != NULL)
-				t_AccNotifyDlg->WriteLogE("fail to attach shared memory(%d)", errno);
-			m_pString = NULL;
-			nRetVal = -2;
-			break;
-		}
-
-		m_bIsConnected = TRUE;
-		nRetVal = 0;
-	}while(FALSE);
-
-	if(nRetVal < 0)
-	{
-		UninitShmEnv();
-	}
-	return nRetVal;
-}
-
-VOID	CThreadAccNotifyEvent::UninitShmEnv()
-{
-	if(m_pString != NULL)
-	{
-		shmdt(m_pString);
-		m_pString = NULL;
-	}
-	m_bIsConnected = FALSE;
-}
-
-INT32 CThreadAccNotifyEvent::ShmWrite(PVOID pWriteData, INT32 nReqSize)
-{
-	PASI_CHK_FILE_PROC pChkFileProc = NULL;
-	if(pWriteData == NULL || nReqSize != sizeof(ASI_CHK_FILE_PROC) || m_pString == NULL)
-	{
-		return -1;
-	}
-	pChkFileProc = (PASI_CHK_FILE_PROC)pWriteData;
-	pChkFileProc->nState = SM_READ_SERVER_FLAG;
-	memcpy(m_pString, pWriteData, sizeof(ASI_CHK_FILE_PROC));
-	return 0;
-}
-
-
-INT32 CThreadAccNotifyEvent::ShmRecv(PVOID pRecvData, INT32 nReqSize)
-{
-	INT32 nContinueCount = 0;
-	INT32 nRetVal = 0;
-	PASI_CHK_FILE_PROC pChkFileProc = NULL;
-	if(pRecvData == NULL || nReqSize != sizeof(ASI_CHK_FILE_PROC) || m_pString == NULL)
-	{
-		return -1;
-	}
-
-	pChkFileProc = (PASI_CHK_FILE_PROC)m_pString;
-	while (nContinueCount < 200)
-	{
-		if(pChkFileProc->nState == SM_READ_CLIENT_FLAG)
-		{
-			memcpy(pRecvData, m_pString, sizeof(ASI_CHK_FILE_PROC));
-			pChkFileProc->nState = SM_WRITE_CLIENT_FLAG;
-			return 0;
-		}
-		nContinueCount++;
-		Sleep(10);
-	}
-	return 1;
-}
-
-
 INT32	CThreadAccNotifyEvent::InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMode)
 {
 	INT32 nRetVal = 0;
+	INT32 i, nPolUse = 0;
 	INT32 nNFd = -1;
 	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
 
@@ -159,14 +71,24 @@ INT32	CThreadAccNotifyEvent::InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMod
 		return nRetVal;
 	}
 
-	do{
-		nRetVal = InitShmEnv();
-		if(nRetVal < 0)
-		{
-			nRetVal -= 20;
+	for(i=0; i<50; i++)
+	{
+		if(t_ThreadAccServerSocket != NULL)
+			t_ThreadAccServerSocket->GetPolicyUse(nPolUse);
+		if(nPolUse == 1)
 			break;
-		}
+		Sleep(500);
+	}
 
+	if(nPolUse == 0)
+	{
+		if(t_AccNotifyDlg != NULL)
+			t_AccNotifyDlg->WriteLogE("[%s] fail to load policy info", m_strThreadName.c_str());
+
+		return -1;
+	}
+
+	do{
 		if(nTestMode == 1)
 		{
 			nRetVal = 0;
@@ -176,8 +98,8 @@ INT32	CThreadAccNotifyEvent::InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMod
 		if(InitAccNotifyFd(nNFd) == FALSE)
 		{
 			if(t_AccNotifyDlg != NULL)
-				t_AccNotifyDlg->WriteLogE("fail to init acc notify fd (%d)", errno);
-			nRetVal = -3;
+				t_AccNotifyDlg->WriteLogE("[%s] fail to init acc notify fd (%d)", errno, m_strThreadName.c_str());
+			nRetVal = -2;
 			break;
 		}
 
@@ -189,7 +111,6 @@ INT32	CThreadAccNotifyEvent::InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMod
 		}
 
 		nNotifyFd = nNFd;
-		memset(m_acSrcPath, 0, MAX_PATH);
 		nRetVal = 0;
 	}while(FALSE);
 
@@ -202,13 +123,11 @@ INT32	CThreadAccNotifyEvent::InitAccNotifyEvent(INT32 &nNotifyFd, INT32 nTestMod
 
 VOID	CThreadAccNotifyEvent::UninitAccNotifyEvent(INT32 nTestMode)
 {
-	memset(m_acSrcPath, 0, MAX_PATH);
 	if(nTestMode == 0)
 	{
 		ClearWatchAccNotify();
 		CloseAccNotifyFd();
 	}
-	UninitShmEnv();
 }
 
 
@@ -233,27 +152,17 @@ INT32 CThreadAccNotifyEvent::Run()
 	INT32 nRetVal = 0;
 	INT32 nNotifyFd = -1;
 	INT32 nTestMode = 0;
-	INT32 i, nTestCount = 0;
+	INT32 nTestCount = 0;
 	char *pcBuffer = NULL;
 	PASI_CHK_FILE_PROC pChkFileProc = NULL;
 	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
 	pid_t tid = 0;
-	for(i=0; i<30; i++)
-	{
-		if(check_proc_exist_by_name(NANNY_AGENT_IDENT, 0) == ASI_PROC_EXIST)
-		{
-			Sleep(1000);
-			break;
-		}
-		Sleep(1000);
-	}
-
 	tid = syscall(SYS_gettid);
 	nRetVal = setpriority(PRIO_PROCESS, tid, -10);
 	if(nRetVal < 0)
 	{
 		if(t_AccNotifyDlg != NULL)
-			t_AccNotifyDlg->WriteLogE("fail to set priority: [%s][%d]", m_strThreadName.c_str(), errno);
+			t_AccNotifyDlg->WriteLogE("[%s] fail to set priority : [%d]", m_strThreadName.c_str(), errno);
 		return -1;
 	}
 
@@ -261,7 +170,7 @@ INT32 CThreadAccNotifyEvent::Run()
 	if(pcBuffer == NULL)
 	{
 		if(t_AccNotifyDlg != NULL)
-			t_AccNotifyDlg->WriteLogE("fail to allocate memory : [%s][%d]", m_strThreadName.c_str(), errno);
+			t_AccNotifyDlg->WriteLogE("[%s] fail to allocate memory : [%d]", m_strThreadName.c_str(), errno);
 		return -2;
 	}
 	memset(pcBuffer, 0, ASI_FANOTIFY_BUFF_MAX+1);
@@ -270,7 +179,7 @@ INT32 CThreadAccNotifyEvent::Run()
 	if(pChkFileProc == NULL)
 	{
 		if(t_AccNotifyDlg != NULL)
-			t_AccNotifyDlg->WriteLogE("fail to allocate memory : [%s][%d]", m_strThreadName.c_str(), errno);
+			t_AccNotifyDlg->WriteLogE("[%s] fail to allocate memory : [%d]", m_strThreadName.c_str(), errno);
 		safe_free(pcBuffer);
 		return -3;
 	}
@@ -278,10 +187,8 @@ INT32 CThreadAccNotifyEvent::Run()
 	nRetVal = InitAccNotifyEvent(nNotifyFd, nTestMode);
 	if(nRetVal == 0)
 	{
+		memset(g_acSrcPath, 0, MAX_PATH);
 		m_nPause = 0;
-		nRetVal = SendReqPoliyToServer(pChkFileProc);
-		if(nRetVal < 0)
-			m_nPause = 1;
 	}
 
 	m_nRunFlag = 1;
@@ -297,6 +204,7 @@ INT32 CThreadAccNotifyEvent::Run()
 				nRetVal = AnalyzeAccNotifyEvent2(pChkFileProc, nTestCount++%6);
 			if(nRetVal != 0)
 			{
+				memset(g_acSrcPath, 0, MAX_PATH);
 				if(nRetVal == -1)
 				{
 					break;
@@ -306,8 +214,7 @@ INT32 CThreadAccNotifyEvent::Run()
 					UninitAccNotifyEvent(nTestMode);
 					if(t_AccNotifyDlg != NULL)
 					{
-						t_AccNotifyDlg->ClearPolicy();
-						t_AccNotifyDlg->WriteLogN("reconnect nannysvc : [%s][%d][%d]", m_strThreadName.c_str(), nRetVal, errno);
+						t_AccNotifyDlg->WriteLogN("[%s] reconnect nannysvc : [%d][%d]", m_strThreadName.c_str(), nRetVal, errno);
 					}
 					nNotifyFd = -1;
 					m_nPause = 1;
@@ -321,9 +228,7 @@ INT32 CThreadAccNotifyEvent::Run()
 			if(nRetVal == 0)
 			{
 				m_nPause = 0;
-				nRetVal = SendReqPoliyToServer(pChkFileProc);
-				if(nRetVal < 0)
-					m_nPause = 1;
+				memset(g_acSrcPath, 0, MAX_PATH);
 			}
 			else
 			{
@@ -335,11 +240,10 @@ INT32 CThreadAccNotifyEvent::Run()
 	UninitAccNotifyEvent(nTestMode);
 	if(t_AccNotifyDlg != NULL)
 	{
-		if(!GetContinue())
-			t_AccNotifyDlg->WriteLogN("stop thread by sub continue flag : [%s]", m_strThreadName.c_str());
+		t_AccNotifyDlg->WriteLogN("[%s] stop thread by sub continue flag", m_strThreadName.c_str());
 	}
-	safe_free(pcBuffer);
 	safe_free(pChkFileProc);
+	safe_free(pcBuffer);
 	return 0;
 }
 
@@ -383,12 +287,14 @@ BOOL CThreadAccNotifyEvent::InitAccNotifyFd(INT32 &nNotifyFd)
 {
 	BOOL bRetVal = TRUE;
 	pthread_mutex_lock (&m_EventMutex);
-	if ( m_nAccNotifyFd < 1 )
+	if ( m_nAccNotifyFd < 0 )
 	{
-		m_nAccNotifyFd = fanotify_init(FAN_CLOEXEC | FAN_CLASS_CONTENT | FAN_NONBLOCK, O_RDONLY | O_LARGEFILE);
+//		m_nAccNotifyFd = fanotify_init(FAN_CLOEXEC | FAN_CLASS_CONTENT | FAN_NONBLOCK, O_RDONLY | O_LARGEFILE);
+		m_nAccNotifyFd = fanotify_init(FAN_CLOEXEC | FAN_CLASS_CONTENT, O_RDONLY | O_CLOEXEC | O_LARGEFILE | O_NOATIME);
 		if ( m_nAccNotifyFd < 0 )
 		{
 			bRetVal = FALSE;
+			nNotifyFd = -1;
 		}
 		else
 		{
@@ -500,10 +406,10 @@ INT32 CThreadAccNotifyEvent::AddWatchAccNotify(INT32 nOrderID, INT32 nNotifyFd, 
 	INT32 nRetVal = 0;
 	PFANOTIFY_PATH pAccNotifyPath = NULL;
 	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
-	if(pPath == NULL || pPath[0] == 0 || nNotifyFd < 1)
+	if(pPath == NULL || pPath[0] == 0 || nNotifyFd < 0)
 	{
 		if(t_AccNotifyDlg)
-			t_AccNotifyDlg->WriteLogE("[AddWatchAccNotify] invalid input data");
+			t_AccNotifyDlg->WriteLogE("[AddWatchAccNotify] invalid input data %d", nNotifyFd);
 		return -1;
 	}
 	nLen = (INT32)strlen(pPath);
@@ -754,13 +660,19 @@ BOOL	CThreadAccNotifyEvent::ParseFilePath(PASI_CHK_INFO pInfo)
 {
 	INT32 i, nLen = 0;
 	BOOL bIsSep = FALSE;
+	BOOL bIsDot = FALSE;
 	if (pInfo == NULL || pInfo->acFullPath[0] == 0 || pInfo->nLen < 1)
 	{
 		return FALSE;
 	}
 	nLen = pInfo->nLen;
+	bIsDot = FALSE;
 	for(i=nLen-1; i>=0; i--)
 	{
+		if(pInfo->acFullPath[i] == '.')	
+		{
+			bIsDot = TRUE;
+		}
 		if(pInfo->acFullPath[i] == '/')	
 		{
 			bIsSep = TRUE;
@@ -792,6 +704,12 @@ BOOL	CThreadAccNotifyEvent::ParseFilePath(PASI_CHK_INFO pInfo)
 		strncpy(pInfo->acPath, pInfo->acFullPath, i);
 		pInfo->acPath[i] = '\0'; 
 	}
+	if(bIsDot == TRUE)
+	{
+		if(_stricmp(pInfo->acFile, "a.out"))
+			return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -812,28 +730,22 @@ BOOL	CThreadAccNotifyEvent::GetFilePathFromFd(INT32 nFd, PASI_CHK_INFO pFileInfo
 	{
 		return FALSE;
 	}
+
 	pFileInfo->acFullPath[nLen] = '\0';
 	pFileInfo->nLen = (INT32)nLen;
-
-	if(nLen > 4)
+	if(nLen > 3)
 	{
-		if(!_stricmp(&pFileInfo->acFullPath[nLen-3], ".so"))
+		if(!_stricmp(&pFileInfo->acFullPath[nLen-3], ".so") || !_stricmp(&pFileInfo->acFullPath[nLen-2], ".o"))
+		{
 			return FALSE;
-		else if(!_stricmp(&pFileInfo->acFullPath[nLen-2], ".o"))
-			return FALSE;
+		}
 	}
+
 	if(ParseFilePath(pFileInfo) == FALSE)
 	{
 		return FALSE;
 	}
-
-	if(!_strnicmp(pFileInfo->acFullPath, "/bin/", 5))
-		return TRUE;
-
-	if(nLen > 9 && !_strnicmp(&pFileInfo->acFullPath[nLen-9], "_file_", 6))
-		return TRUE;
-
-	return FALSE;
+	return TRUE;
 }
 
 BOOL	CThreadAccNotifyEvent::GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcInfo)
@@ -862,35 +774,127 @@ BOOL	CThreadAccNotifyEvent::GetProcPathFromPid(INT32 nPid, PASI_CHK_INFO pProcIn
 	return TRUE;
 }
 
-INT32		CThreadAccNotifyEvent::ChkInPtn(PASI_CHK_FILE_PROC pChkFileProc, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType)
+INT32		CThreadAccNotifyEvent::ChkInPtnEx(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType)
+{
+	INT32 nDenyCount = 0;
+	INT32 nAllowCount = 0;
+	CString strHash;
+	if(pChkFileProc == NULL || t_ThreadAccServerSocket == NULL)
+		return 0;
+
+	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_OFF)
+	{
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		nIsWarning = 1;
+		return 1;
+	}
+
+	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_WARN)
+		nIsWarning = 1;
+
+	nDenyCount = t_ThreadAccServerSocket->GetDenyExPathCount();
+	nAllowCount = t_ThreadAccServerSocket->GetAllowExPathCount();
+	if(nDenyCount < 1 && nAllowCount < 1)
+		return 0;
+
+	if(stPolicyInfo.nExUsedMode == STATUS_USED_MODE_OFF)
+		return 0;
+	if(stPolicyInfo.nExUsedMode == STATUS_USED_MODE_WARN)
+		nIsWarning = 1;
+
+	if(nAllowCount != 0 && t_ThreadAccServerSocket->FindAllowExPathStr(strFullPath, strHash))
+	{
+		pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_EX;
+		strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+		pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		return 1;
+	}
+	if(nDenyCount != 0 && t_ThreadAccServerSocket->FindDenyExPathStr(strFullPath, strHash))
+	{
+		pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_EX;
+		strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+		pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		return 1;
+	}
+	return 0;
+}
+
+INT32		CThreadAccNotifyEvent::ChkInPtnSP(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType)
+{
+	CString strHash;
+	INT32 nDenyCount = 0;
+	INT32 nAllowCount = 0;
+	if(pChkFileProc == NULL || t_ThreadAccServerSocket == NULL)
+		return 0;
+
+	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_OFF)
+	{
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		nIsWarning = 1;
+		return 1;
+	}
+	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_WARN)
+		nIsWarning = 1;
+
+	if(stPolicyInfo.nSpUsedMode == STATUS_USED_MODE_OFF)
+		return 0;
+	if(stPolicyInfo.nSpUsedMode == STATUS_USED_MODE_WARN)
+		nIsWarning = 1;
+
+	nDenyCount = t_ThreadAccServerSocket->GetDenySpPathCount();
+	nAllowCount = t_ThreadAccServerSocket->GetAllowSpPathCount();
+	if(nDenyCount < 1 && nAllowCount < 1)
+		return 0;
+
+
+	if(nAllowCount != 0 && t_ThreadAccServerSocket->FindAllowSpPathStr(strFullPath, strHash))
+	{
+		pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_SP;
+		strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+		pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		return 1;
+	}
+	if(nDenyCount != 0 && t_ThreadAccServerSocket->FindDenySpPathStr(strFullPath, strHash))
+	{
+		pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_SP;
+		strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+		pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		return 1;
+	}
+
+	return 0;
+}
+
+INT32		CThreadAccNotifyEvent::ChkInPtn(PASI_CHK_FILE_PROC pChkFileProc, CString strFullPath, ASI_POLICY_INFO &stPolicyInfo, INT32& nBlockMode, INT32& nIsWarning, INT32& nPolicyType)
 {
 	UINT32 nBLCount = 0;
 	UINT32 nWLCount = 0;
+	UINT32 nCLCount = 0;
 	UINT32 nPtnRisk = PTN_FB_PTN_RISK_UNKNOW;
-	CString strFullPath;
 	CString strHash;
-	ASI_POLICY_INFO stPolicyInfo;
-	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
-	if(pChkFileProc == NULL || t_AccNotifyDlg == NULL)
+	if(pChkFileProc == NULL || t_ThreadAccServerSocket == NULL)
 		return 0;
-
-	memset(&stPolicyInfo, 0, sizeof(ASI_POLICY_INFO));
-	t_AccNotifyDlg->GetPolicyInfo(&stPolicyInfo);
 
 	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_OFF)
 		return 0;
 
-	nBLCount = t_AccNotifyDlg->GetBLPathCnt();
+	nBLCount = t_ThreadAccServerSocket->GetBlPathCount();
 	if(nBLCount == 0)
 	{
-		stPolicyInfo.nBLUsedMode  = STATUS_USED_MODE_OFF;
+		stPolicyInfo.nBLUsedMode = STATUS_USED_MODE_OFF;
 	}
 
-	nWLCount = t_AccNotifyDlg->GetWLPathCnt();
+	nWLCount = t_ThreadAccServerSocket->GetWlPathCount();
 	if(nWLCount == 0)
 	{
 		stPolicyInfo.nWLUsedMode = STATUS_USED_MODE_OFF;
 	}
+
+	nCLCount = t_ThreadAccServerSocket->GetCrPathCount();
 
 	if(stPolicyInfo.nBLUsedMode == STATUS_USED_MODE_OFF && stPolicyInfo.nWLUsedMode == STATUS_USED_MODE_OFF)
 		return 0;
@@ -898,43 +902,98 @@ INT32		CThreadAccNotifyEvent::ChkInPtn(PASI_CHK_FILE_PROC pChkFileProc, INT32& n
 	if(stPolicyInfo.nOpMode == STATUS_USED_MODE_WARN)
 		nIsWarning = 1;
 
-	strFullPath.Format("%s", pChkFileProc->stFileInfo.acFullPath);
 	nPtnRisk = PTN_FB_PTN_RISK_UNKNOW;
-	if(stPolicyInfo.nWLUsedMode != STATUS_USED_MODE_OFF && nWLCount != 0)
+	if(stPolicyInfo.nBLUsedMode != STATUS_USED_MODE_OFF)
 	{
-		if(t_AccNotifyDlg->FindWLPathStr(strFullPath, strHash))
-		{
-			nPtnRisk = PTN_FB_PTN_RISK_WHITE;
-			strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
-			pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
-		}
-	}
-
-	if(nPtnRisk == PTN_FB_PTN_RISK_UNKNOW && stPolicyInfo.nBLUsedMode != STATUS_USED_MODE_OFF && nBLCount != 0)
-	{
-		if(t_AccNotifyDlg->FindBLPathStr(strFullPath, strHash))
+		if(t_ThreadAccServerSocket->FindBlPathStr(strFullPath, strHash))
 		{
 			nPtnRisk = PTN_FB_PTN_RISK_BLACK;
+			pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_BLACK;
 			strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
 			pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
 		}
 	}
 
-	nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
-	if(nPtnRisk == PTN_FB_PTN_RISK_WHITE)
+	if(nPtnRisk == PTN_FB_PTN_RISK_UNKNOW && stPolicyInfo.nWLUsedMode != STATUS_USED_MODE_OFF)
 	{
-		nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + stPolicyInfo.nWLID;
-		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		if(t_ThreadAccServerSocket->FindWlPathStr(strFullPath, strHash))
+		{
+			nPtnRisk = PTN_FB_PTN_RISK_WHITE;
+			pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_WHITE;
+			strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+			pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		}
 	}
-	else if(nPtnRisk == PTN_FB_PTN_RISK_BLACK)
+
+	if(!_stricmp(pChkFileProc->stProcInfo.acFile, "cp_test") && !_strnicmp(pChkFileProc->stFileInfo.acFile, "tc", 2))
 	{
-		nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL + stPolicyInfo.nBLID;
-		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		if(pChkFileProc->stFileInfo.nPtn == PTN_FB_PTN_RISK_WHITE)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + stPolicyInfo.nWLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+			return 1;
+		}
+		else if(pChkFileProc->stFileInfo.nPtn == PTN_FB_PTN_RISK_BLACK)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL + stPolicyInfo.nWLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+			return 1;
+		}
 	}
+
+
+	if(nPtnRisk == PTN_FB_PTN_RISK_UNKNOW && nCLCount != 0)
+	{
+		if(t_ThreadAccServerSocket->FindCrPathStr(strFullPath, strHash))
+		{
+			nPtnRisk = PTN_FB_PTN_RISK_YELLOW;
+			pChkFileProc->stFileInfo.nPtn = PTN_FB_PTN_RISK_YELLOW;
+			strncpy(pChkFileProc->stRetInfo.acWhiteHash, (char*)(LPCSTR)strHash, SHA512_BLOCK_SIZE+1);
+			pChkFileProc->stRetInfo.acWhiteHash[SHA512_BLOCK_SIZE] = 0;
+		}
+	}
+
+	if(stPolicyInfo.nOpBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW)
+	{
+		if(stPolicyInfo.nBLUsedMode == STATUS_USED_MODE_OFF)
+			return 0;
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		if(nPtnRisk == PTN_FB_PTN_RISK_BLACK)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL + stPolicyInfo.nBLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		}
+		else if(nPtnRisk == PTN_FB_PTN_RISK_WHITE)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + stPolicyInfo.nWLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		}
+	}
+	else
+	{
+		nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+
+		if(nPtnRisk == PTN_FB_PTN_RISK_BLACK)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_BL + stPolicyInfo.nBLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+		}
+		else if(nPtnRisk == PTN_FB_PTN_RISK_YELLOW)
+		{
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY;
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_OP + stPolicyInfo.nOpID;
+		}
+		else if(nPtnRisk == PTN_FB_PTN_RISK_WHITE)
+		{
+			nPolicyType = ASI_EPS_APP_POLICY_GROUP_ID_IN_PTN_WL + stPolicyInfo.nWLID;
+			nBlockMode = SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_ALLOW;
+		}
+	}
+
 	return 1;
 }
 
-VOID	CThreadAccNotifyEvent::SetRetValValue(ASI_RET_INFO *pstRetInfo, INT32 nAcVal, INT32 nBlockMode, INT32 nIsWarning, INT32 nPolicyType)
+VOID	CThreadAccNotifyEvent::SetReturnValue(ASI_RET_INFO *pstRetInfo, INT32 nAcVal, INT32 nBlockMode, INT32 nIsWarning, INT32 nPolicyType)
 {
 	if(pstRetInfo != NULL)
 	{
@@ -945,6 +1004,21 @@ VOID	CThreadAccNotifyEvent::SetRetValValue(ASI_RET_INFO *pstRetInfo, INT32 nAcVa
 	}
 }
 
+INT32	CThreadAccNotifyEvent::CheckPolicyInfo(ASI_POLICY_INFO &stPolicyInfo)
+{
+	INT32 PolicyUse = 0;
+	if(t_ThreadAccServerSocket == NULL)
+		return -1;
+
+	t_ThreadAccServerSocket->GetPolicyUse(PolicyUse);
+	if(PolicyUse == 0)
+		return -2;
+
+	t_ThreadAccServerSocket->GetPolicyInfo(&stPolicyInfo);
+	return 0;
+}
+
+
 
 INT32	CThreadAccNotifyEvent::AnalyzeAccEvent(PASI_CHK_FILE_PROC pChkFileProc)
 {
@@ -953,40 +1027,147 @@ INT32	CThreadAccNotifyEvent::AnalyzeAccEvent(PASI_CHK_FILE_PROC pChkFileProc)
 	INT32 nAcVal = RET_NONE;
 	INT32 nIsWarning = 0;
 	INT32 nPolicyType = 0;
-
+	ASI_POLICY_INFO stPolicyInfo;
+	CString strFullPath;
 	if(pChkFileProc == NULL)
 	{
 		return RET_NONE;
 	}
-
+	memset(&stPolicyInfo, 0, sizeof(ASI_POLICY_INFO));
 	do{
-		nRetVal = ChkInPtn(pChkFileProc, nBlockMode, nIsWarning, nPolicyType);
-		if(nRetVal != 1)
+
+		nRetVal = CheckPolicyInfo(stPolicyInfo);
+		if(nRetVal < 0)
 		{
 			nAcVal = RET_NONE;
 			break;
 		}
-		if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
+		strFullPath.Format("%s", pChkFileProc->stFileInfo.acFullPath);
+
+		nRetVal = ChkInPtnEx(pChkFileProc, strFullPath, stPolicyInfo, nBlockMode, nIsWarning, nPolicyType);
+		if(nRetVal == 1)
 		{
-			if(nIsWarning == 1)
-				nAcVal = RET_WARN;
-			else
-				nAcVal = RET_DENY;
-			SetRetValValue(&pChkFileProc->stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
+			nAcVal = RET_ALLOW;
+			if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
+			{
+				if(nIsWarning == 1)
+					nAcVal = RET_WARN;
+				else
+					nAcVal = RET_DENY;
+			}
+			SetReturnValue(&pChkFileProc->stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
+			break;
 		}
-		else
+
+		nRetVal = ChkInPtnSP(pChkFileProc, strFullPath, stPolicyInfo, nBlockMode, nIsWarning, nPolicyType);
+		if(nRetVal == 1)
 		{
-			nAcVal = RET_NONE;
-			SetRetValValue(&pChkFileProc->stRetInfo, nAcVal, 0, 0, 0);
+			nAcVal = RET_ALLOW;
+			if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
+			{
+				if(nIsWarning == 1)
+					nAcVal = RET_WARN;
+				else
+					nAcVal = RET_DENY;
+			}
+			SetReturnValue(&pChkFileProc->stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
+			break;
 		}
+
+		nRetVal = ChkInPtn(pChkFileProc, strFullPath, stPolicyInfo, nBlockMode, nIsWarning, nPolicyType);
+		if(nRetVal == 1)
+		{
+			nAcVal = RET_ALLOW;
+			if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
+			{
+				if(nIsWarning == 1)
+					nAcVal = RET_WARN;
+				else
+					nAcVal = RET_DENY;
+			}
+			SetReturnValue(&pChkFileProc->stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
+			break;
+		}
+		nAcVal = RET_NONE;
 	}while(FALSE);
 
 	return nAcVal;
 }
 
 
+INT32	CThreadAccNotifyEvent::BypassObjectPath(PASI_CHK_FILE_PROC pChkFileProc)
+{
+	if(pChkFileProc == NULL)
+		return -1;
+	if(!_strnicmp(pChkFileProc->stProcInfo.acFullPath, NANNY_INSTALL_DIR, NANNY_INSTALL_DIR_LEN))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, NANNY_INSTALL_DIR, NANNY_INSTALL_DIR_LEN))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stProcInfo.acFile, REQ_WHITE_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stFileInfo.acFile, REQ_WHITE_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stProcInfo.acFile, MAKE_TEST_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stProcInfo.acFile, LD_BIN_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stFileInfo.acFile, MAKE_TEST_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stFileInfo.acFile, CP_TEST_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stFileInfo.acFile, EXE_TEST_NAME))
+	{
+		return 0;
+	}
+	else if(!_stricmp(pChkFileProc->stFileInfo.acFile, WRITE_TEST_NAME))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/sys", 4))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/lib", 4))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/proc", 5))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/usr/src", 8))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/var/lib", 8))
+	{
+		return 0;
+	}
+	else if(!_strnicmp(pChkFileProc->stFileInfo.acFullPath, "/usr/include", 12))
+	{
+		return 0;
+	}
+	return -2;
+}
 
-INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc)
+
+INT32	CThreadAccNotifyEvent::AnalyzeWithPolicyServer(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc)
 {
 	struct fanotify_response stAccess;
 	INT32 nRetVal = 0;
@@ -1006,9 +1187,9 @@ INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData,
 	do{
 		if(GetProcPathFromPid(pEvent->pid, &pChkFileProc->stProcInfo) == FALSE)
 		{
-			nAcVal = RET_NONE;
-			nRetVal = 0;
-			break;
+			snprintf(pChkFileProc->stProcInfo.acFullPath, MAX_PATH-1, "pid/%d", pEvent->pid);
+			strncpy(pChkFileProc->stProcInfo.acPath, "pid", MAX_PATH-1);
+			snprintf(pChkFileProc->stProcInfo.acFile, MAX_FILE_NAME-1, "%d", pEvent->pid);
 		}
 
 		if(GetFilePathFromFd(pEvent->fd, &pChkFileProc->stFileInfo) == FALSE)
@@ -1017,31 +1198,15 @@ INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData,
 			nRetVal = 0;
 			break;
 		}
-
-		if(_stricmp(pChkFileProc->stProcInfo.acFile, "cp_test"))
+		if(BypassObjectPath(pChkFileProc) == 0)
 		{
 			nAcVal = RET_NONE;
 			nRetVal = 0;
 			break;
 		}
-
-		if(m_acSrcPath[0] == 0)
-		{
-			strncpy(m_acSrcPath, pChkFileProc->stFileInfo.acFullPath, MAX_PATH-1);
-			m_acSrcPath[MAX_PATH-1] = 0;
-			nAcVal = RET_NONE;
-			nRetVal = 0;
-			break;
-		}
-		else
-		{
-			memset(m_acSrcPath, 0, MAX_PATH);
-		}
-
 		nAcVal = AnalyzeAccEvent(pChkFileProc);
 		nRetVal = 0;
 	}while(FALSE);
-
 
 	stAccess.fd = pEvent->fd;
 	stAccess.response = FAN_ALLOW;
@@ -1055,60 +1220,43 @@ INT32	CThreadAccNotifyEvent::SendEventToServer(INT32 nNotifyFd, PVOID pMetaData,
 		close(pEvent->fd);
 		pEvent->fd = -1;
 	}
-
 	if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 	{
-		if(m_acSrcPath[0] != 0)
+		if(!_stricmp(pChkFileProc->stProcInfo.acFile, "cp_test"))
 		{
-			strncpy(pChkFileProc->stFileInfo.acPath, m_acSrcPath, MAX_PATH-1);
-			pChkFileProc->stFileInfo.acPath[MAX_PATH-1] = 0;
+			pChkFileProc->nCmdId = CMD_PIPE_PO_IN_ACCESS_FILE;
 		}
-		pChkFileProc->nCmdId = CMD_PIPE_PO_IN_ACCESS_FILE;
-		nRetVal = ShmWrite((PVOID)pChkFileProc, nSize);
-		if(nRetVal < 0)
+		else
 		{
-			nRetVal -= 10;
-			return nRetVal;
+			pChkFileProc->nCmdId = CMD_PIPE_PO_IN_EXECUTE_FILE;
+		}
+		if(t_ThreadAccClientSocket != NULL)
+		{
+			nRetVal = t_ThreadAccClientSocket->AddChkFileProcList(pChkFileProc);
+			if(nRetVal != 0)
+			{
+				return -3;
+			}
+		}
+	}
+	else
+	{
+		if(!_stricmp(pChkFileProc->stProcInfo.acFile, "exe_test_pgm"))
+		{
+			if(pChkFileProc->stFileInfo.nPtn == PTN_FB_PTN_RISK_WHITE)
+			{
+				pChkFileProc->nCmdId = CMD_PIPE_PO_IN_EXECUTE_FILE;
+				pChkFileProc->stRetInfo.nAcVal = RET_ALLOW;
+				nRetVal = t_ThreadAccClientSocket->AddChkFileProcList(pChkFileProc);
+				if(nRetVal != 0)
+				{
+					return -4;
+				}
+			}
 		}
 	}
 	return nRetVal;
 }
-
-INT32	CThreadAccNotifyEvent::SendReqPoliyToServer(PASI_CHK_FILE_PROC pChkFileProc)
-{
-	INT32 i, nRetVal = 0;
-	INT32 nSize = sizeof(ASI_CHK_FILE_PROC);
-	CAccNotifyDlg* t_AccNotifyDlg = (CAccNotifyDlg *)m_pNotifyWnd;
-
-	if(pChkFileProc == NULL)
-	{
-		if(t_AccNotifyDlg)
-			t_AccNotifyDlg->WriteLogE("[SendReqPoliyToServer] invalid input data");
-		return -1;
-	}
-	pChkFileProc->nCmdId = CMD_PIPE_REQ_ACCESS_INFO;
-	nRetVal = ShmWrite((PVOID)pChkFileProc, nSize);
-	if(nRetVal < 0)
-	{
-		nRetVal -= 10;
-		if(t_AccNotifyDlg)
-			t_AccNotifyDlg->WriteLogE("[SendReqPoliyToServer] fail to sock write %d %d", nRetVal, errno);
-		return nRetVal;
-	}
-	for(i=0; i<100; i++)
-	{
-		nRetVal = t_AccNotifyDlg->GetPolicyState();
-		if(nRetVal == 1)
-		{
-			if(t_AccNotifyDlg)
-				t_AccNotifyDlg->WriteLogN("success to recv acc notidy policy");
-			break;
-		}
-		Sleep(100);
-	}
-	return 0;
-}
-
 
 INT32	CThreadAccNotifyEvent::AnalyzeAccNotifyEvent(INT32 nNotifyFd, PVOID pMetaData, PASI_CHK_FILE_PROC pChkFileProc)
 {
@@ -1132,13 +1280,7 @@ INT32	CThreadAccNotifyEvent::AnalyzeAccNotifyEvent(INT32 nNotifyFd, PVOID pMetaD
 
 	if (pEvent->mask & FAN_OPEN_PERM)
 	{
-		nRetVal = SendEventToServer(nNotifyFd, pMetaData, pChkFileProc);
-	}
-
-	if(pEvent->fd > 0)
-	{
-		close(pEvent->fd);
-		pEvent->fd = -1;
+		nRetVal = AnalyzeWithPolicyServer(nNotifyFd, pMetaData, pChkFileProc);
 	}
 	return nRetVal;
 }
@@ -1217,29 +1359,47 @@ INT32	CThreadAccNotifyEvent::AnalyzeAccNotifyEvent2(PASI_CHK_FILE_PROC pChkFileP
 	}
 
 	do{
-		strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/cp_test", MAX_PATH-1);
-		pChkFileProc->stProcInfo.acFullPath[MAX_PATH-1] = 0;
-		pChkFileProc->stProcInfo.nLen = (INT32)strlen(pChkFileProc->stProcInfo.acFullPath);
-
-		if(ParseFilePath(&pChkFileProc->stProcInfo) == FALSE)
+		if(nCount == 0)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/zsh", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/bin/ping", MAX_PATH-1);
+		}
+		else if(nCount == 1)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/zsh", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/home/tc/tc9/tc9_file_004", MAX_PATH-1);
+		}	
+		else if(nCount == 2)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/zsh", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/home/tc/tc9/tc9_file_005", MAX_PATH-1);
+		}
+		else if(nCount == 3)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/zsh", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/sys/tc9/tc9_file_003", MAX_PATH-1);
+		}
+		else if(nCount == 4)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/cp_test", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/usr/bin/vim.tiny", MAX_PATH-1);
+		}
+		else if(nCount == 5)
+		{
+			strncpy(pChkFileProc->stProcInfo.acFullPath, "/bin/cp_test", MAX_PATH-1);
+			strncpy(pChkFileProc->stFileInfo.acFullPath, "/usr/share/autojump/autojump", MAX_PATH-1);
+		}
+		else
 		{
 			nAcVal = RET_NONE;
 			nRetVal = 0;
 			break;
 		}
-		if(nCount == 0)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/bin/ping", MAX_PATH-1);
-		else if(nCount == 1)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/bin/kmod", MAX_PATH-1);
-		else if(nCount == 2)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/bin/true", MAX_PATH-1);
-		else if(nCount == 3)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/usr/bin/tail", MAX_PATH-1);
-		else if(nCount == 4)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/usr/bin/vim.tiny", MAX_PATH-1);
-		else if(nCount == 5)
-			strncpy(pChkFileProc->stFileInfo.acFullPath, "/usr/share/autojump/autojump", MAX_PATH-1);
-		else
+
+		pChkFileProc->stProcInfo.acFullPath[MAX_PATH-1] = 0;
+		pChkFileProc->stProcInfo.nLen = (INT32)strlen(pChkFileProc->stProcInfo.acFullPath);
+
+		if(ParseFilePath(&pChkFileProc->stProcInfo) == FALSE)
 		{
 			nAcVal = RET_NONE;
 			nRetVal = 0;
@@ -1254,38 +1414,26 @@ INT32	CThreadAccNotifyEvent::AnalyzeAccNotifyEvent2(PASI_CHK_FILE_PROC pChkFileP
 			break;
 		}
 
-		nRetVal = ChkInPtn(pChkFileProc, nBlockMode, nIsWarning, nPolicyType);
-		if(nRetVal != 1)
-		{
-			nAcVal = RET_NONE;
-			break;
-		}
-		if(nBlockMode == SS_PO_IN_PTN_OP_BLOCK_MODE_TYPE_DENY)
-		{
-			if(nIsWarning == 1)
-				nAcVal = RET_WARN;
-			else
-				nAcVal = RET_DENY;
-			SetRetValValue(&pChkFileProc->stRetInfo, nAcVal, nBlockMode, nIsWarning, nPolicyType);
-		}
-		else
-		{
-			nAcVal = RET_NONE;
-			SetRetValValue(&pChkFileProc->stRetInfo, nAcVal, 0, 0, 0);
-		}
+		nAcVal = AnalyzeAccEvent(pChkFileProc);
 		nRetVal = 0;
 	}while(FALSE);
 
 	if(nAcVal == RET_DENY || nAcVal == RET_WARN)
 	{
-		pChkFileProc->nCmdId = CMD_PIPE_PO_IN_ACCESS_FILE;
-		nRetVal = ShmWrite((PVOID)pChkFileProc, nSize);
-		if(nRetVal < 0)
+		if(!_stricmp(pChkFileProc->stProcInfo.acFile, "cp_test"))
 		{
-			nRetVal -= 10;
+			pChkFileProc->nCmdId = CMD_PIPE_PO_IN_ACCESS_FILE;
 		}
-		//log
-		fprintf(stderr, "%s deny or warn\n", pChkFileProc->stFileInfo.acFullPath);
+		else
+		{
+			pChkFileProc->nCmdId = CMD_PIPE_PO_IN_EXECUTE_FILE;
+		}
+		if(t_ThreadAccClientSocket != NULL)
+		{
+			nRetVal = t_ThreadAccClientSocket->AddChkFileProcList(pChkFileProc);
+			if(nRetVal < 0)
+				return -3;
+		}
 	}
 	Sleep(2000);
 	return nRetVal;

@@ -24,7 +24,8 @@
 #include "com_struct.h"
 #include "accnotify_thread.h"
 #include "accnotify_thread_event.h"
-#include "accnotify_thread_policy.h"
+#include "accnotify_thread_client_socket.h"
+#include "accnotify_thread_server_socket.h"
 #include "accnotify_dlg.h"
 
 
@@ -367,18 +368,27 @@ INT32		CAccNotifyDlg::CreateSubClass()
 		return -1;
 	}
 */
-	t_ThreadAccNotifyPolicy = new CThreadAccNotifyPolicy();
-	if(t_ThreadAccNotifyPolicy == NULL)
+	t_ThreadAccServerSocket = new CThreadAccServerSocket();
+	if(t_ThreadAccServerSocket == NULL)
 	{
 		return -1;
 	}
-	t_ThreadAccNotifyPolicy->SetNotifyWnd((HWND)this);
+	t_ThreadAccServerSocket->SetNotifyWnd((HWND)this);
+
+	t_ThreadAccClientSocket = new CThreadAccClientSocket();
+	if(t_ThreadAccClientSocket == NULL)
+	{
+		SAFE_DELETE(t_ThreadAccServerSocket);
+		return -2;
+	}
+	t_ThreadAccClientSocket->SetNotifyWnd((HWND)this);
 
 	t_ThreadAccNotifyEvent = new CThreadAccNotifyEvent();
 	if(t_ThreadAccNotifyEvent == NULL)
 	{
-		SAFE_DELETE(t_ThreadAccNotifyPolicy);
-		return -2;
+		SAFE_DELETE(t_ThreadAccServerSocket);
+		SAFE_DELETE(t_ThreadAccClientSocket);
+		return -3;
 	}
 	t_ThreadAccNotifyEvent->SetNotifyWnd((HWND)this);
 	return 0;
@@ -398,6 +408,8 @@ INT32		CAccNotifyDlg::StartSubClass()
 {
 	pthread_t tid = 0;
 	BOOL bRetVal = FALSE;
+	INT32 i = 0, nRetVal = 0;
+	UINT32 nUpTime = 0;
 /*
 	bRetVal = t_AccMonThreadTimer->CreateThreadExt("timer", &tid);
 	if(bRetVal == FALSE)
@@ -407,22 +419,51 @@ INT32		CAccNotifyDlg::StartSubClass()
 	}
 	Sleep(10);
 */
+	for(i=0; i<300; i++)
+	{
+		nUpTime = uptime();
+		if(nUpTime > TIMER_INTERVAL_TIME_MIN*5)
+		{
+			break;
+		}
+		Sleep(1000);
+	}
+	for(i=0; i<10; i++)
+	{
+		nRetVal = check_proc_exist_by_name(NANNY_AGENT_IDENT, 0);
+		if(nRetVal == ASI_PROC_EXIST)
+		{
+			break;
+		}
+		Sleep(1000);
+	}
+
 	tid = 0;
-	bRetVal = t_ThreadAccNotifyPolicy->CreateThreadExt("accpolicy", &tid);
+	bRetVal = t_ThreadAccServerSocket->CreateThreadExt("acc_server", &tid);
 	if(bRetVal == FALSE)
 	{
-		WriteLogE("start [accpolicy] thread result : fail [%d]", errno);
+		WriteLogE("start [acc_server] thread result : fail [%d]", errno);
+		return -1;
+
+	}
+	Sleep(10);
+
+	tid = 0;
+	bRetVal = t_ThreadAccClientSocket->CreateThreadExt("acc_client", &tid);
+	if(bRetVal == FALSE)
+	{
+		WriteLogE("start [acc_client] thread result : fail [%d]", errno);
 		return -2;
 
 	}
 	Sleep(10);
 
 	tid = 0;
-	bRetVal = t_ThreadAccNotifyEvent->CreateThreadExt("accnotify", &tid);
+	bRetVal = t_ThreadAccNotifyEvent->CreateThreadExt("acc_notify", &tid);
 	if(bRetVal == FALSE)
 	{
-		WriteLogE("start [accnotify] thread result : fail [%d]", errno);
-		return -2;
+		WriteLogE("start [acc_notify] thread result : fail [%d]", errno);
+		return -3;
 
 	}
 	Sleep(10);
@@ -503,22 +544,28 @@ VOID CAccNotifyDlg::StopSubClass()
 	SetER(StopThread_Common(t_AccMonThreadTimer));
 	WriteLogN("stop [timer] thread result : [%d]", g_nErrRtn);
 */
-
-	t_ThreadAccNotifyPolicy->SetContinue(0);
-	SetER(StopThread_Common(t_ThreadAccNotifyPolicy));
-	WriteLogN("stop [accpolicy] thread result : [%d]", g_nErrRtn);
-
 	t_ThreadAccNotifyEvent->SetContinue(0);
 	SetER(StopThread_Common(t_ThreadAccNotifyEvent));
-	WriteLogN("stop [accnotify] thread result : [%d]", g_nErrRtn);
+	WriteLogN("stop [acc_notify] thread result : [%d]", g_nErrRtn);
+
+	t_ThreadAccServerSocket->SetSockContinue(0);
+	t_ThreadAccServerSocket->SetContinue(0);
+	SetER(StopThread_Common(t_ThreadAccServerSocket));
+	WriteLogN("stop [acc_server] thread result : [%d]", g_nErrRtn);
+
+	t_ThreadAccClientSocket->SetContinue(0);
+	SetER(StopThread_Common(t_ThreadAccClientSocket));
+	WriteLogN("stop [acc_client] thread result : [%d]", g_nErrRtn);
+
 }
 //--------------------------------------------------------------------
 
 VOID		CAccNotifyDlg::DeleteSubClass()
 {
 //	SAFE_DELETE(t_AccMonThreadTimer);
-	SAFE_DELETE(t_ThreadAccNotifyPolicy);
 	SAFE_DELETE(t_ThreadAccNotifyEvent);
+	SAFE_DELETE(t_ThreadAccServerSocket);
+	SAFE_DELETE(t_ThreadAccClientSocket);
 }
 
 

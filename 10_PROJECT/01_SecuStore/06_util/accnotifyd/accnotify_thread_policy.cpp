@@ -75,7 +75,7 @@ INT32 CThreadAccNotifyPolicy::InitUnixSock(INT32 &nSrvFd)
 	INT32 nOptVal = 1;
 	struct sockaddr_un serveraddr;
 	char acSockPath[MAX_FILE_NAME] = {0,};
-	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_POL_FILE);
+	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_UNUSED_FILE);
 	acSockPath[MAX_FILE_NAME-1] = 0;
 	if(is_file(acSockPath) == SOCK_FILE)
 	{
@@ -124,7 +124,7 @@ VOID CThreadAccNotifyPolicy::UninitUnixSock()
 	}
 	pthread_mutex_unlock (&m_SockMutex);
 
-	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_POL_FILE);
+	snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_UNUSED_FILE);
 	acSockPath[MAX_FILE_NAME-1] = 0;
 	if(is_file(acSockPath) == SOCK_FILE)
 	{
@@ -298,7 +298,7 @@ INT32		CThreadAccNotifyPolicy::SendExitThreadCmd()
 			break;
 		}
 
-		snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_POL_FILE);
+		snprintf(acSockPath, MAX_FILE_NAME-1, "%s/%s/pem/%s", NANNY_INSTALL_DIR, NANNY_AGENT_DIR, UNIX_SOCK_UNUSED_FILE);
 		acSockPath[MAX_FILE_NAME-1] = 0;
 		nClientLen = sizeof(stClientAddr);
 		memset(&stClientAddr, 0, nClientLen);
