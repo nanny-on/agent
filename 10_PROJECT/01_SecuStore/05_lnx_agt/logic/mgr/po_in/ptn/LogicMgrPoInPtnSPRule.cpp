@@ -114,6 +114,8 @@ INT32		CLogicMgrPoInPtnSPRule::AnalyzePkt_FromMgr_Edit_Ext()
 			}
 		}
 
+		if(t_ThreadPoInAccFile != NULL)
+			t_ThreadPoInAccFile->SendPolicy(AS_SEND_SP_FILE);
 		t_ManagePoInPtnSPRule->InitHash();
 	}
 
